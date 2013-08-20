@@ -1,0 +1,30 @@
+/***************************************************************************
+ *   Copyright (C) 2013 by Volokh                                          *
+ *   <volokh84@gmail.com>                                                  *
+ *                                                                         *
+ *   This program is under GPL 2 licence you may redistribute it and/or    *
+ *   modify                                                                *
+ *   Ligovskii Pr 203-207, StPetersburg, HomeWork, Russia                  *
+ ***************************************************************************/
+
+[USAGE]
+original from: ./configure --enable-all --with-dahdi=[path_to_dahdi]
+
+cronyx _adapter    -> dahdi_device (store with .sw)
+cronyx _interface  -> dahdi_span
+cronyx _channel    -> dahdi_chan
+
+[BUG]
+
+[NONEED]
+- 16.08.2013: Tauisa & sigma haven`t appropriate device for dahdi_device registration stuff (out of business) (volokh)
+
+[TODO]
+- 14.08.2013: cbinder need to assign "Set Default Protocol Mode: \"idle\", \"async\", \"sync\",
+    \"cisco\", \"rbrg\", \"fr\", \"raw\", \"packet\", \"dahdi\"(default)." (volokh)
+- 10.06.2013: Test Cronyx in RubiconSS7 stuffs (volokh)
+
+[DONE]
++ 21.07.2013/16.08.2013: Rewrite dahdi initialization part with dahdi_create_device (volokh)
++ 21.06.2013/21.06.2013: Allocate Cronyx drivers on dithub (volokh)
++ 05.06.2013/20.06.2013: Upgrade cdahdi.ko Cronyx Tau-PCI/4E1 corresponding current version of dahdi (volokh)

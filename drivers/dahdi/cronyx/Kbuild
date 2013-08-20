@@ -1,0 +1,43 @@
+#***************************************************************************
+#*   Copyright (C) 2013 by Volokh                                          *
+#*   <volokh@telros.ru>, <volokh84@gmail.com>                              *
+#*                                                                         *
+#*   This program is under GPL 2 licence you may redistribute it and/or    *
+#*   modify                                                                *
+#*   B.Sampsonievskii 87, StPetersburg, ZAO Telros, Russia                 *
+#***************************************************************************
+
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX) += cbinder.o crdahdi.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CE) += ce.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CP) += cp.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CT) += ct.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CX) += cx.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CASYNC) += casync.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CSYNC) += csync.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CCISCO) += ccisco.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CFR) += cfr.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CRBRG) += crbrg.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CPACKET) += cpacket.o
+obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CRAW) += craw.o
+
+#MODHEAD		= module.h cserial.h ddk-arch.h ddk-host.h \
+#		  taupci-ddk.h tauisa-ddk.h sigma-ddk.h tau32-ddk.h
+
+#EXTRA_CFLAGS += -I$(src)/.. $(shell $(src)/../oct612x/octasic-helper cflags $(src)/../oct612x) -Wno-undef
+
+EXTRA_CFLAGS += -I$(src)/ -mfpmath=sse -msse2 -DDAHDI_ECHO_MODE_DEFINED
+#$(call cc-option, -Wno-unused-but-set-variable)
+
+cbinder-objs := binder.o
+crdahdi-objs := cdahdi.o
+ce-objs := tau32.o tau32-ddk.o
+cp-objs := taupci.o taupci-ddk.o
+ct-objs := tauisa.o tauisa-ddk.o
+cx-objs := sigma.o sigma-ddk.o
+casync-objs := async.o
+csync-objs := sync.o
+ccisco-objs := cisco.o
+cfr-objs := fr.o
+crbrg-objs := rbrg.o
+cpacket-objs := packet.o
+craw-objs := raw.o
