@@ -291,4 +291,70 @@ config DAHDI_WCTE11XP
 
 	  If unsure, say Y.
 
+config DAHDI_E1P2
+	tristate "Telros E1P-2 Support"
+	depends on DAHDI && PCI
+	default DAHDI
+	---help---
+	  This driver provides support for the Telros E1P-2 (E1/T1) Card.
+	  To compile this driver as a module, choose M here: the
+	  module will be called e1p2.
+
+	  If unsure, say Y.
+
+config DAHDI_CRONYX
+	tristate "Cronyx Cards Support"
+	depends on DAHDI && PCI
+	default DAHDI
+	---help---
+	  This item provides support for the Cronyx Cards.
+	  To compile this driver as a module, choose M here: the
+	  module will be called cdahdi.
+
+	  If unsure, say Y.
+
+config DAHDI_CRONYX_CE
+	tristate "Cronyx Tau-PCI/32 Support"
+	depends on DAHDI_CRONYX
+	default DAHDI_CRONYX
+	---help---
+	  This driver provides support for the Cronyx Tau-PCI/32 Card.
+	  To compile this driver as a module, choose M here: the
+	  module will be called ce.
+
+	  If unsure, say Y.
+
+config DAHDI_CRONYX_CP
+	tristate "Cronyx Tau-PCI/Lite, Tau-PCI/2E1, Tau-PCI/4E1 Support"
+	depends on DAHDI_CRONYX
+	default DAHDI_CRONYX
+	---help---
+	  This driver provides support for the Cronyx Tau-PCI (Tau-PCI/Lite, Tau-PCI/2E1, Tau-PCI/4E1) Cards.
+	  To compile this driver as a module, choose M here: the
+	  module will be called cp.
+
+	  If unsure, say Y.
+
+config DAHDI_CRONYX_CT
+	tristate "Cronyx Tau-ISA Support"
+	depends on DAHDI_CRONYX
+	default DAHDI_CRONYX
+	---help---
+	  This driver provides support for the Cronyx Tau-ISA Card.
+	  To compile this driver as a module, choose M here: the
+	  module will be called ct.
+
+	  If unsure, say Y.
+
+config DAHDI_CRONYX_CX
+	tristate "Cronyx Sigma-ISA Support"
+	depends on DAHDI_CRONYX
+	default DAHDI_CRONYX
+	---help---
+	  This driver provides support for the Cronyx Sigma-ISA Card.
+	  To compile this driver as a module, choose M here: the
+	  module will be called cx.
+
+	  If unsure, say Y.
+
 source "drivers/dahdi/xpp/Kconfig"
