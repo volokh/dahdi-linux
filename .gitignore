@@ -37,3 +37,4 @@ drivers/dahdi/firmware/*.bin
 drivers/dahdi/firmware/make_firmware_object
 drivers/dahdi/e1p2/*
 drivers/dahdi/cronyx.*
+Dahdi-Linux.spec
