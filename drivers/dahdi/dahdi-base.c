@@ -7316,6 +7316,7 @@ int dahdi_assign_span(struct dahdi_span *span, unsigned int spanno,
 	mutex_unlock(&registration_mutex);
 	return ret;
 }
+EXPORT_SYMBOL(dahdi_assign_span);
 
 int dahdi_assign_device_spans(struct dahdi_device *ddev)
 {
@@ -7521,6 +7522,7 @@ int dahdi_unassign_span(struct dahdi_span *span)
 	mutex_unlock(&registration_mutex);
 	return ret;
 }
+EXPORT_SYMBOL(dahdi_unassign_span);
 
 /**
  * dahdi_unregister_device() - unregister a DAHDI device

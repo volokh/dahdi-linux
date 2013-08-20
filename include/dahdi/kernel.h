@@ -1197,6 +1197,11 @@ void dahdi_unregister_device(struct dahdi_device *ddev);
 void dahdi_free_device(struct dahdi_device *ddev);
 void dahdi_init_span(struct dahdi_span *span);
 
+/*! dynamicaly span (un)assign controls !*/
+int dahdi_assign_span(struct dahdi_span *span, unsigned int spanno,
+		      unsigned int basechan, int prefmaster);
+int dahdi_unassign_span(struct dahdi_span *span);
+
 /*! Allocate / free memory for a transcoder */
 struct dahdi_transcoder *dahdi_transcoder_alloc(int numchans);
 void dahdi_transcoder_free(struct dahdi_transcoder *ztc);
