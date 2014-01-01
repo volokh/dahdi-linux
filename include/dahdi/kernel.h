@@ -811,6 +811,7 @@ enum spantypes {
 	SPANTYPE_DIGITAL_BRI_NT,
 	SPANTYPE_DIGITAL_BRI_TE,
 	SPANTYPE_DIGITAL_BRI_SOFT,
+	SPANTYPE_DIGITAL_DYNAMIC,
 };
 const char *dahdi_spantype2str(enum spantypes st);
 enum spantypes dahdi_str2spantype(const char *name);
@@ -909,7 +910,7 @@ struct dahdi_span_ops {
 	/*! Opt: Provide the name of the echo canceller on a channel */
 	const char *(*echocan_name)(const struct dahdi_chan *chan);
 
-	/*! When using "pinned_spans", this function is called back when this
+	/*! When using "assigned spans", this function is called back when this
 	 * span has been assigned with the system. */
 	void (*assigned)(struct dahdi_span *span);
 
@@ -1003,6 +1004,8 @@ struct dahdi_transcoder_channel {
 };
 
 int dahdi_is_sync_master(const struct dahdi_span *span);
+struct dahdi_span *get_master_span(void);
+void set_master_span(int spanno);
 
 static inline int 
 dahdi_tc_is_built(struct dahdi_transcoder_channel *dtc) {
@@ -1407,6 +1410,8 @@ static inline short dahdi_txtone_nextsample(struct dahdi_chan *ss)
 #define DAHDI_FORMAT_AUDIO_MASK	((1 << 16) - 1)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+#ifdef RHEL_RELEASE_VERSION
+#if RHEL_RELEASE_CODE < RHEL_RELEASE_VERSION(6, 5)
 #ifdef CONFIG_PROC_FS
 #include <linux/proc_fs.h>
 static inline void *PDE_DATA(const struct inode *inode)
@@ -1414,8 +1419,37 @@ static inline void *PDE_DATA(const struct inode *inode)
 	return PDE(inode)->data;
 }
 #endif
+#endif
+#else
+#ifdef CONFIG_PROC_FS
+#include <linux/proc_fs.h>
+static inline void *PDE_DATA(const struct inode *inode)
+{
+	return PDE(inode)->data;
+}
+#endif
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)
 #define KERN_CONT ""
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 27)
+
+#  ifndef RHEL_RELEASE_VERSION
+/* I'm not sure which 5.x release this was backported into. */
+static inline int try_wait_for_completion(struct completion *x)
+{
+	unsigned long flags;
+	int ret = 1;
+
+	spin_lock_irqsave(&x->wait.lock, flags);
+	if (!x->done)
+		ret = 0;
+	else
+		x->done--;
+	spin_unlock_irqrestore(&x->wait.lock, flags);
+	return ret;
+}
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 26)
 #ifdef CONFIG_PROC_FS
 #include <linux/proc_fs.h>
@@ -1455,8 +1489,11 @@ void dahdi_pci_disable_link_state(struct pci_dev *pdev, int state);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 22)
 
-#ifndef __packed                                                                                         
-#define __packed  __attribute__((packed))                                                                
+#define list_first_entry(ptr, type, member) \
+	list_entry((ptr)->next, type, member)
+
+#ifndef __packed
+#define __packed  __attribute__((packed))
 #endif 
 
 #include <linux/ctype.h>
@@ -1484,6 +1521,7 @@ static inline int strcasecmp(const char *s1, const char *s2)
 #endif /* 2.6.22 */
 #endif /* 2.6.25 */
 #endif /* 2.6.26 */
+#endif /* 2.6.27 */
 #endif /* 2.6.31 */
 #endif /* 3.10.0 */
 
@@ -1574,6 +1612,17 @@ struct mutex {
 #ifndef pr_info
 #define pr_info(fmt, ...) \
 	printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
+#endif
+
+/* If KBUILD_MODNAME is not defined in a compilation unit, then the dev_dbg
+ * macro will not work properly. */
+#ifndef KBUILD_MODNAME
+  #undef dev_dbg
+  #ifdef DEBUG
+    #define dev_dbg dev_info
+  #else
+    #define dev_dbg(...) do { } while (0)
+  #endif
 #endif
 
 /* The dbg_* ones use a magical variable 'debug' and the user should be

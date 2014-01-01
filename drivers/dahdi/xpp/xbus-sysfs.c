@@ -23,6 +23,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/errno.h>
+#include <linux/mutex.h>
 #include <linux/proc_fs.h>
 #ifdef	PROTOCOL_DEBUG
 #include <linux/ctype.h>
@@ -54,10 +55,19 @@ static ssize_t sync_store(struct device_driver *driver, const char *buf,
 	return exec_sync_command(buf, count);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 static struct driver_attribute xpp_attrs[] = {
 	__ATTR(sync, S_IRUGO | S_IWUSR, sync_show, sync_store),
 	__ATTR_NULL,
 };
+#else
+static DRIVER_ATTR_RW(sync);
+static struct attribute *xpp_attrs[] = {
+	&driver_attr_sync.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(xpp);
+#endif
 
 /*--------- Sysfs Bus handling ----*/
 static DEVICE_ATTR_READER(xbus_state_show, dev, buf)
@@ -409,7 +419,11 @@ static struct bus_type toplevel_bus_type = {
 	.match = astribank_match,
 	.uevent = astribank_uevent,
 	.dev_attrs = xbus_dev_attrs,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 	.drv_attrs = xpp_attrs,
+#else
+	.drv_groups = xpp_groups,
+#endif
 };
 
 static int astribank_probe(struct device *dev)
@@ -582,6 +596,8 @@ static DEVICE_ATTR_READER(span_show, dev, buf)
 	return len;
 }
 
+static DEFINE_MUTEX(span_store_mutex);
+
 /*
  * For backward compatibility with old dahdi-tools
  * Remove after dahdi_registration is upgraded
@@ -601,8 +617,13 @@ static DEVICE_ATTR_WRITER(span_store, dev, buf, count)
 		return -EINVAL;
 	if (!XBUS_IS(xpd->xbus, READY))
 		return -ENODEV;
-	XPD_DBG(DEVICES, xpd, "%s -- deprecated (should use pinned-spans)\n",
+	XPD_DBG(DEVICES, xpd, "%s -- deprecated (should use assigned-spans)\n",
 		(dahdi_reg) ? "register" : "unregister");
+	ret = mutex_lock_interruptible(&span_store_mutex);
+	if (ret < 0) {
+		XBUS_ERR(xpd->xbus, "span_store_mutex already taken\n");
+		return ret;
+	}
 	if (xbus_is_registered(xpd->xbus)) {
 		if (dahdi_reg) {
 			XPD_DBG(DEVICES, xpd,
@@ -620,6 +641,7 @@ static DEVICE_ATTR_WRITER(span_store, dev, buf, count)
 			xbus_register_dahdi_device(xpd->xbus);
 		}
 	}
+	mutex_unlock(&span_store_mutex);
 	return count;
 }
 

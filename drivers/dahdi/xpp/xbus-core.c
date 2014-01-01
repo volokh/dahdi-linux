@@ -24,6 +24,7 @@
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
+#include <linux/mutex.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #ifdef	PROTOCOL_DEBUG
@@ -59,7 +60,7 @@ static DEF_PARM(uint, command_queue_length, 1500, 0444,
 static DEF_PARM(uint, poll_timeout, 1000, 0644,
 		"Timeout (in jiffies) waiting for units to reply");
 static DEF_PARM_BOOL(rx_tasklet, 0, 0644, "Use receive tasklets");
-static DEF_PARM_BOOL(dahdi_autoreg, 0, 0644,
+static DEF_PARM_BOOL(dahdi_autoreg, 1, 0644,
 		     "Register devices automatically (1) or not (0)");
 
 #ifdef	CONFIG_PROC_FS
@@ -937,6 +938,8 @@ static void xbus_free_ddev(xbus_t *xbus)
 	xbus->ddev = NULL;
 }
 
+static DEFINE_MUTEX(dahdi_registration_mutex);
+
 int xbus_register_dahdi_device(xbus_t *xbus)
 {
 	int i;
@@ -944,6 +947,11 @@ int xbus_register_dahdi_device(xbus_t *xbus)
 	int ret;
 
 	XBUS_DBG(DEVICES, xbus, "Entering %s\n", __func__);
+	ret = mutex_lock_interruptible(&dahdi_registration_mutex);
+	if (ret < 0) {
+		XBUS_ERR(xbus, "dahdi_registration_mutex already taken\n");
+		goto err;
+	}
 	if (xbus_is_registered(xbus)) {
 		XBUS_ERR(xbus, "Already registered to DAHDI\n");
 		WARN_ON(1);
@@ -1008,17 +1016,26 @@ int xbus_register_dahdi_device(xbus_t *xbus)
 			xpd_dahdi_postregister(xpd);
 		}
 	}
-	return 0;
+	ret = 0;
+out:
+	mutex_unlock(&dahdi_registration_mutex);
+	return ret;
 err:
 	xbus_free_ddev(xbus);
-	return ret;
+	goto out;
 }
 
 void xbus_unregister_dahdi_device(xbus_t *xbus)
 {
 	int i;
+	int ret;
 
 	XBUS_NOTICE(xbus, "%s\n", __func__);
+	ret = mutex_lock_interruptible(&dahdi_registration_mutex);
+	if (ret < 0) {
+		XBUS_ERR(xbus, "dahdi_registration_mutex already taken\n");
+		return;
+	}
 	for (i = 0; i < MAX_XPDS; i++) {
 		xpd_t *xpd = xpd_of(xbus, i);
 		xpd_dahdi_preunregister(xpd);
@@ -1033,6 +1050,7 @@ void xbus_unregister_dahdi_device(xbus_t *xbus)
 		xpd_t *xpd = xpd_of(xbus, i);
 		xpd_dahdi_postunregister(xpd);
 	}
+	mutex_unlock(&dahdi_registration_mutex);
 }
 
 /*
