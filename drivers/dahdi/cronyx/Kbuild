@@ -1,10 +1,10 @@
 #***************************************************************************
-#*   Copyright (C) 2013 by Volokh                                          *
-#*   <volokh@telros.ru>, <volokh84@gmail.com>                              *
+#*   Copyright (C) 2013-2014 by Volokh                                     *
+#*   <volokh84@gmail.com>                                                  *
 #*                                                                         *
 #*   This program is under GPL 2 licence you may redistribute it and/or    *
 #*   modify                                                                *
-#*   B.Sampsonievskii 87, StPetersburg, ZAO Telros, Russia                 *
+#*   Ligovskii Pr 203-207, StPetersburg, HomeWork, Russia                  *
 #***************************************************************************
 
 obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX) += cbinder.o crdahdi.o
@@ -25,7 +25,7 @@ obj-$(DAHDI_BUILD_ALL)$(CONFIG_DAHDI_CRONYX_CRAW) += craw.o
 
 #EXTRA_CFLAGS += -I$(src)/.. $(shell $(src)/../oct612x/octasic-helper cflags $(src)/../oct612x) -Wno-undef
 
-EXTRA_CFLAGS += -I$(src)/ -mfpmath=sse -msse2 -DDAHDI_ECHO_MODE_DEFINED
+EXTRA_CFLAGS += -I$(src)/ -mfpmath=sse -msse2 -DDAHDI_ECHO_MODE_DEFINED -mpreferred-stack-boundary=4
 #$(call cc-option, -Wno-unused-but-set-variable)
 
 cbinder-objs := binder.o
