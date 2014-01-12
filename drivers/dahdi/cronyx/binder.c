@@ -24,28 +24,28 @@
 #include <linux/if_ether.h>
 #include <linux/fs.h>
 #if LINUX_VERSION_CODE < 0x020600
-#include <linux/tqueue.h>
+#	include <linux/tqueue.h>
 #else
-#include <linux/sched.h>
-#include <linux/workqueue.h>
+#	include <linux/sched.h>
+#	include <linux/workqueue.h>
 #endif
 #include <linux/delay.h>
 #include <linux/completion.h>
 #include <linux/semaphore.h>
 #include "cserial.h"
 
-MODULE_AUTHOR("Cronyx Engineering, Moscow, Russia.");
-MODULE_DESCRIPTION("Cronyx dynamic binder\n" CRONYX_VERSION_INFO "\n");
-MODULE_LICENSE("Dual BSD/GPL");
+MODULE_AUTHOR ("Cronyx Engineering, Moscow, Russia.");
+MODULE_DESCRIPTION ("Cronyx dynamic binder\n" CRONYX_VERSION_INFO "\n");
+MODULE_LICENSE ("Dual BSD/GPL");
 
 static ushort Debug = 0x00;
-module_param(Debug, ushort, 0600);
-MODULE_PARM_DESC(Debug, "Default Debug Level: (0..9), 0 - debugging disabled,"
+module_param (Debug, ushort, 0600);
+MODULE_PARM_DESC (Debug, "Default Debug Level: (0..9), 0 - debugging disabled,"
 									"9 - maximum debug information (for developers)");
 
 static char *DefaultBindProto = "dahdi";
-module_param(DefaultBindProto, charp, S_IRUGO);
-MODULE_PARM_DESC(DefaultBindProto, "Set Default Protocol Mode: \"idle\","
+module_param (DefaultBindProto, charp, S_IRUGO);
+MODULE_PARM_DESC (DefaultBindProto, "Set Default Protocol Mode: \"idle\","
 								" \"async\", \"sync\", \"cisco\", \"rbrg\", \"fr\", \"raw\","
 								" \"packet\", \"dahdi\"(default).");
 
@@ -61,22 +61,21 @@ typedef struct _binder_node_t {
 may_static binder_node_t binder_root;
 
 #if LINUX_VERSION_CODE < 0x30409
-  may_static DECLARE_MUTEX (binder_sema);
+may_static DECLARE_MUTEX (binder_sema);
 #else
-  may_static DEFINE_SEMAPHORE (binder_sema);
+may_static DEFINE_SEMAPHORE (binder_sema);
 #endif
 
 #if LINUX_VERSION_CODE < 0x30409
-  may_static DECLARE_MUTEX (binder_topology);
+may_static DECLARE_MUTEX (binder_topology);
 #else
-  may_static DEFINE_SEMAPHORE (binder_topology);
+may_static DEFINE_SEMAPHORE (binder_topology);
 #endif
 
 may_static struct task_struct *binder_locker, *binder_deffered_task;
 may_static int binder_lockdepth;
 may_static binder_node_t *minor2item[CRONYX_MINOR_MAX] = { &binder_root };
-may_static int binder_item_id, binder_evolution, binder_total_items,
-								binder_push_evolution = -1;
+may_static int binder_item_id, binder_evolution, binder_total_items, binder_push_evolution = -1;
 may_static unsigned long binder_last_nominor;
 
 may_static struct timer_list second_timer, led_timer;
@@ -110,25 +109,25 @@ struct enum_scope_t {
 	int *ids;
 };
 
-may_static void binder_get(void)
+may_static void binder_get (void)
 {
 #if LINUX_VERSION_CODE < 0x020600
 	MOD_INC_USE_COUNT;
 #else
-	try_module_get(THIS_MODULE);
+	try_module_get (THIS_MODULE);
 #endif
 }
 
-may_static void binder_put(void)
+may_static void binder_put (void)
 {
 #if LINUX_VERSION_CODE < 0x020600
 	MOD_DEC_USE_COUNT;
 #else
-	module_put(THIS_MODULE);
+	module_put (THIS_MODULE);
 #endif
 }
 
-may_static void binder_lock(void)
+may_static void binder_lock (void)
 {
 	might_sleep ();
 	if (binder_locker != current) {
@@ -141,7 +140,7 @@ may_static void binder_lock(void)
 	BUG_ON (binder_locker != current || binder_lockdepth < 1);
 }
 
-may_static void binder_unlock(void)
+may_static void binder_unlock (void)
 {
 	BUG_ON (binder_locker != current || binder_lockdepth < 1);
 	if (--binder_lockdepth == 0) {
@@ -150,24 +149,24 @@ may_static void binder_unlock(void)
 	}
 }
 
-may_static void binder_provider_get(cronyx_binder_item_t* h)
+may_static void binder_provider_get (cronyx_binder_item_t* h)
 {
 	if (h->provider) {
 #if LINUX_VERSION_CODE < 0x020600
 		__MOD_INC_USE_COUNT (h->provider);
 #else
-		try_module_get(h->provider);
+		try_module_get (h->provider);
 #endif
 	}
 }
 
-may_static void binder_provider_put(cronyx_binder_item_t* h)
+may_static void binder_provider_put (cronyx_binder_item_t* h)
 {
 	if (h->provider) {
 #if LINUX_VERSION_CODE < 0x020600
 		__MOD_DEC_USE_COUNT (h->provider);
 #else
-		module_put(h->provider);
+		module_put (h->provider);
 #endif
 	}
 }
@@ -183,12 +182,12 @@ struct binder_deffered_t {
 	} call;
 };
 
-static inline struct binder_deffered_t *binder_alloc_deffered(char *reason)
+static inline struct binder_deffered_t *binder_alloc_deffered (char *reason)
 {
 	struct binder_deffered_t *d;
 
 #if LINUX_VERSION_CODE < 0x020600
-	d = kmalloc (sizeof(struct binder_deffered_t), GFP_ATOMIC);
+	d = kmalloc (sizeof (struct binder_deffered_t), GFP_ATOMIC);
 #else
 	d = mempool_alloc (pool_deffered_item, GFP_ATOMIC);
 #endif
@@ -197,19 +196,19 @@ static inline struct binder_deffered_t *binder_alloc_deffered(char *reason)
 	return d;
 }
 
-static inline void binder_free_deffered(struct binder_deffered_t *d)
+static inline void binder_free_deffered (struct binder_deffered_t *d)
 {
 #if LINUX_VERSION_CODE < 0x020600
-	kfree(d);
+	kfree (d);
 #else
-	mempool_free(d, pool_deffered_item);
+	mempool_free (d, pool_deffered_item);
 #endif
 }
 
 #if LINUX_VERSION_CODE < 0x020614
-may_static void binder_deffered(void *unused)
+may_static void binder_deffered (void *unused)
 #else
-may_static void binder_deffered(struct work_struct *work)
+may_static void binder_deffered (struct work_struct *work)
 #endif /* LINUX_VERSION_CODE < 0x020614 */
 {
 	unsigned long flags;
@@ -218,36 +217,36 @@ may_static void binder_deffered(struct work_struct *work)
 	down (&binder_workqueue_mutex);
 #endif
 
-	spin_lock_irqsave(&deffered_lock, flags);
+	spin_lock_irqsave (&deffered_lock, flags);
 	binder_deffered_task = current;
 	while (!list_empty (&deffered_list)) {
 		struct binder_deffered_t *d;
 
 		d = list_entry (deffered_list.next, struct binder_deffered_t, entry);
 		list_del (&d->entry);
-		spin_unlock_irqrestore(&deffered_lock, flags);
+		spin_unlock_irqrestore (&deffered_lock, flags);
 
 		if (d->param_2 == d)
 			d->call._1 (d->param_1);
 		else
 			d->call._2 (d->param_1, d->param_2);
 
-		binder_free_deffered(d);
-		spin_lock_irqsave(&deffered_lock, flags);
+		binder_free_deffered (d);
+		spin_lock_irqsave (&deffered_lock, flags);
 	}
 	binder_deffered_task = NULL;
-	spin_unlock_irqrestore(&deffered_lock, flags);
+	spin_unlock_irqrestore (&deffered_lock, flags);
 
 #ifdef CBINDER_NEED_WQM
 	up (&binder_workqueue_mutex);
 #endif
 }
 
-may_static void binder_deffered_queue(struct binder_deffered_t *d)
+may_static void binder_deffered_queue (struct binder_deffered_t *d)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&deffered_lock, flags);
+	spin_lock_irqsave (&deffered_lock, flags);
 	list_add_tail (&d->entry, &deffered_list);
 	if (binder_deffered_task != current && d->entry.next == &deffered_list && d->entry.prev == &deffered_list) {
 #if LINUX_VERSION_CODE < 0x020600
@@ -258,19 +257,19 @@ may_static void binder_deffered_queue(struct binder_deffered_t *d)
 		schedule_work (&binder_work);
 #endif /* LINUX_VERSION_CODE < 0x020600 */
 	}
-	spin_unlock_irqrestore(&deffered_lock, flags);
+	spin_unlock_irqrestore (&deffered_lock, flags);
 }
 
-may_static void binder_deffered_wake(void *p1, void *p2)
+may_static void binder_deffered_wake (void *p1, void *p2)
 {
 	struct completion *wake_phase = p1;
 	struct completion *lock_phase = p2;
 
-	complete(wake_phase);
+	complete (wake_phase);
 	if (lock_phase) {
 		BUG_ON (binder_locker == current);
 		wait_for_completion (lock_phase);
-		complete(wake_phase);
+		complete (wake_phase);
 	}
 }
 
@@ -283,10 +282,10 @@ may_static void binder_deffered_flush_ex (struct completion *lock_phase)
 		struct completion wake_phase;
 
 		for (;;) {
-			d = binder_alloc_deffered("deffered_flush_queue()");
+			d = binder_alloc_deffered ("deffered_flush_queue ()");
 			if (d != NULL)
 				break;
-			schedule();
+			schedule ();
 		}
 
 		d->param_1 = &wake_phase;
@@ -294,19 +293,19 @@ may_static void binder_deffered_flush_ex (struct completion *lock_phase)
 		d->call._2 = binder_deffered_wake;
 
 		init_completion (&wake_phase);
-		binder_deffered_queue(d);
+		binder_deffered_queue (d);
 		wait_for_completion (&wake_phase);
 
 		if (unlikely (lock_phase != 0)) {
 			INIT_COMPLETION (wake_phase);
-			binder_lock();
-			complete(lock_phase);
+			binder_lock ();
+			complete (lock_phase);
 			wait_for_completion (&wake_phase);
 		}
 	}
 }
 
-may_static void binder_deffered_flush_and_lock(void)
+may_static void binder_deffered_flush_and_lock (void)
 {
 	if (current != binder_deffered_task && current != binder_locker) {
 		struct completion lock_phase;
@@ -314,7 +313,7 @@ may_static void binder_deffered_flush_and_lock(void)
 		init_completion (&lock_phase);
 		binder_deffered_flush_ex (&lock_phase);
 	} else
-		binder_lock();
+		binder_lock ();
 }
 
 void binder_deffered_flush (void)
@@ -323,7 +322,7 @@ void binder_deffered_flush (void)
 		binder_deffered_flush_ex (NULL);
 }
 
-EXPORT_SYMBOL(binder_deffered_flush);
+EXPORT_SYMBOL (binder_deffered_flush);
 
 //-----------------------------------------------------------------------------
 
@@ -335,22 +334,22 @@ may_static void binder_kick_timers (void);
 #	define led_lock(p, flags) \
 		do { \
 			if (likely (p->use_rawlock)) \
-				spin_lock_irqsave(p->lock.raw, flags); \
+				spin_lock_irqsave (p->lock.raw, flags); \
 			else \
-				spin_lock_irqsave(p->lock.normal, flags); \
+				spin_lock_irqsave (p->lock.normal, flags); \
 		} while (0)
 #	define led_unlock(p, flags) \
 		do { \
 			if (likely (p->use_rawlock)) \
-				spin_unlock_irqrestore(p->lock.raw, flags); \
+				spin_unlock_irqrestore (p->lock.raw, flags); \
 			else \
-				spin_unlock_irqrestore(p->lock.normal, flags); \
+				spin_unlock_irqrestore (p->lock.normal, flags); \
 		} while (0)
 #else
 #	define led_lock(p, flags) \
-		spin_lock_irqsave(p->lock, flags)
+		spin_lock_irqsave (p->lock, flags)
 #	define led_unlock(p, flags) \
-		spin_unlock_irqrestore(p->lock, flags)
+		spin_unlock_irqrestore (p->lock, flags)
 #endif /* CONFIG_PREEMPT_RT */
 
 may_static void binder_flash_off (unsigned long arg)
@@ -360,10 +359,10 @@ may_static void binder_flash_off (unsigned long arg)
 
 	if (!f->tag)
 		return;
-	led_lock(f, flags);
+	led_lock (f, flags);
 	f->kick = 0;
-	f->led_set(f->tag, f->last = cronyx_led_getblink (f));
-	led_unlock(f, flags);
+	f->led_set (f->tag, f->last = cronyx_led_getblink (f));
+	led_unlock (f, flags);
 }
 
 may_static void binder_set_flash_timer (struct cronyx_led_flasher_t *f)
@@ -379,14 +378,14 @@ may_static void binder_set_flash_timer (struct cronyx_led_flasher_t *f)
 
 #ifdef CONFIG_PREEMPT_RT
 void cronyx_led_init_ex (struct cronyx_led_flasher_t *f, int use_rawlock, void *spinlock, void *tag,
-			 void (*led_set) (void *, int on), int(*get_state) (void *))
+			 void (*led_set) (void *, int on), int (*get_state) (void *))
 {
 	f->use_rawlock = use_rawlock;
 	f->lock.ptr = spinlock;
 #else
 
-void cronyx_led_init(struct cronyx_led_flasher_t *f, spinlock_t *spinlock, void *tag,
-		      void (*led_set) (void *, int on), int(*get_state) (void *))
+void cronyx_led_init (struct cronyx_led_flasher_t *f, spinlock_t *spinlock, void *tag,
+		      void (*led_set) (void *, int on), int (*get_state) (void *))
 {
 	f->lock = spinlock;
 #endif /* CONFIG_PREEMPT_RT */
@@ -399,42 +398,42 @@ void cronyx_led_init(struct cronyx_led_flasher_t *f, spinlock_t *spinlock, void 
 	f->counter = (((unsigned long) f) >> 2) & 31;
 	f->mode = CRONYX_LEDMODE_DEFAULT;
 	init_timer (&f->timer);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	list_add_tail (&f->entry, &leds_list);
 	binder_kick_timers ();
-	binder_unlock();
+	binder_unlock ();
 }
 
 #ifdef CONFIG_PREEMPT_RT
-EXPORT_SYMBOL(cronyx_led_init_ex);
+EXPORT_SYMBOL (cronyx_led_init_ex);
 #else
-EXPORT_SYMBOL(cronyx_led_init);
+EXPORT_SYMBOL (cronyx_led_init);
 #endif /* CONFIG_PREEMPT_RT */
 
-void cronyx_led_destroy(struct cronyx_led_flasher_t *f)
+void cronyx_led_destroy (struct cronyx_led_flasher_t *f)
 {
 	unsigned long flags;
 
-	binder_deffered_flush_and_lock();
-	list_del_init(&f->entry);
+	binder_deffered_flush_and_lock ();
+	list_del_init (&f->entry);
 	f->mode = CRONYX_LEDMODE_OFF;
 	del_timer_sync (&f->timer);
 
-	led_lock(f, flags);
+	led_lock (f, flags);
 	f->last = 0;
 	f->kick = 0;
-	f->led_set(f->tag, 0);
-	led_unlock(f, flags);
+	f->led_set (f->tag, 0);
+	led_unlock (f, flags);
 #ifdef CONFIG_PREEMPT_RT
 	f->lock.ptr = NULL;
 #else
 	f->lock = NULL;
 #endif /* CONFIG_PREEMPT_RT */
 
-	binder_unlock();
+	binder_unlock ();
 }
 
-EXPORT_SYMBOL(cronyx_led_destroy);
+EXPORT_SYMBOL (cronyx_led_destroy);
 
 void cronyx_led_kick (struct cronyx_led_flasher_t *f, unsigned kick)
 {
@@ -443,13 +442,13 @@ void cronyx_led_kick (struct cronyx_led_flasher_t *f, unsigned kick)
 	if (f->mode & kick) {
 		if (f->kick == 0) {
 			f->kick = 1;
-			f->led_set(f->tag, f->last ^ f->kick);
+			f->led_set (f->tag, f->last ^ f->kick);
 			binder_set_flash_timer (f);
 		}
 	}
 }
 
-EXPORT_SYMBOL(cronyx_led_kick);
+EXPORT_SYMBOL (cronyx_led_kick);
 
 int cronyx_led_ctl (struct cronyx_led_flasher_t *f, unsigned cmd, struct cronyx_ctl_t *ctl)
 {
@@ -469,7 +468,7 @@ int cronyx_led_ctl (struct cronyx_led_flasher_t *f, unsigned cmd, struct cronyx_
 	return -ENOSYS;
 }
 
-EXPORT_SYMBOL(cronyx_led_ctl);
+EXPORT_SYMBOL (cronyx_led_ctl);
 
 int cronyx_led_getblink (struct cronyx_led_flasher_t *f)
 {
@@ -495,13 +494,13 @@ int cronyx_led_getblink (struct cronyx_led_flasher_t *f)
 		default:
 			if (f->get_state == NULL)
 				return 0;
-			actual_cadence = state2cadence[f->get_state(f->tag)];
+			actual_cadence = state2cadence[f->get_state (f->tag)];
 	}
 
 	return (actual_cadence >> f->counter) & 1;
 }
 
-EXPORT_SYMBOL(cronyx_led_getblink);
+EXPORT_SYMBOL (cronyx_led_getblink);
 
 //-----------------------------------------------------------------------------
 
@@ -533,13 +532,13 @@ may_static void binder_second_work (void *unused)
 
 may_static void binder_timer2deffer (unsigned long p)
 {
-	struct binder_deffered_t *d = binder_alloc_deffered("timer");
+	struct binder_deffered_t *d = binder_alloc_deffered ("timer");
 
 	if (d != NULL) {
 		d->param_2 = d;
 		d->param_1 = NULL;
 		d->call._1 = (void (*)(void *)) p;
-		binder_deffered_queue(d);
+		binder_deffered_queue (d);
 	}
 }
 
@@ -550,11 +549,11 @@ may_static void binder_led_work (void *unused)
 		unsigned long flags;
 
 		list_for_each_entry (f, &leds_list, entry) {
-			led_lock(f, flags);
+			led_lock (f, flags);
 			f->counter = (f->counter + 1) & 31;
 			f->last = cronyx_led_getblink (f);
-			f->led_set(f->tag, f->last ^ f->kick);
-			led_unlock(f, flags);
+			f->led_set (f->tag, f->last ^ f->kick);
+			led_unlock (f, flags);
 		}
 		led_timer.function = binder_timer2deffer;
 		mod_timer (&led_timer, jiffies + (HZ + 11) / 12);
@@ -581,10 +580,10 @@ may_static void binder_kick_timers (void)
 
 may_static binder_node_t *binder_lookup_item (binder_node_t *from, cronyx_binder_item_t *h);
 
-cronyx_binder_item_t *cronyx_binder_item_get_parent(cronyx_binder_item_t *h,
+cronyx_binder_item_t *cronyx_binder_item_get_parent (cronyx_binder_item_t *h,
 																										int type)
 {
-	binder_node_t *node = binder_lookup_item(&binder_root, h);
+	binder_node_t *node = binder_lookup_item (&binder_root, h);
 
 	while (node && node->item)
 	{
@@ -596,13 +595,13 @@ cronyx_binder_item_t *cronyx_binder_item_get_parent(cronyx_binder_item_t *h,
 
 	return NULL;
 }
-EXPORT_SYMBOL(cronyx_binder_item_get_parent);
+EXPORT_SYMBOL (cronyx_binder_item_get_parent);
 
-cronyx_binder_item_t *cronyx_minor2item(int minor)
+cronyx_binder_item_t *cronyx_minor2item (int minor)
 {
 	binder_node_t *node;
 
-	if (minor < 0 || minor >= sizeof(minor2item) / sizeof(minor2item[0]))
+	if (minor < 0 || minor >= sizeof (minor2item) / sizeof (minor2item[0]))
 		return NULL;
 
 	node = minor2item[minor];
@@ -611,14 +610,14 @@ cronyx_binder_item_t *cronyx_minor2item(int minor)
 	return node->item;
 }
 
-EXPORT_SYMBOL(cronyx_minor2item);
+EXPORT_SYMBOL (cronyx_minor2item);
 
-may_static binder_node_t *inode2node(struct inode *inode)
+may_static binder_node_t *inode2node (struct inode *inode)
 {
 	int minor;
 
 	minor = MINOR (inode->i_rdev);
-	if (minor < 0 || minor >= sizeof(minor2item) / sizeof(minor2item[0]))
+	if (minor < 0 || minor >= sizeof (minor2item) / sizeof (minor2item[0]))
 		return NULL;
 	return minor2item[minor];
 }
@@ -627,7 +626,7 @@ may_static cronyx_binder_item_t *inode2chan (struct inode *inode)
 {
 	binder_node_t *node;
 
-	node = inode2node(inode);
+	node = inode2node (inode);
 	if (node == NULL || node->item == NULL || node->item->type != CRONYX_ITEM_CHANNEL)
 		return NULL;
 	return node->item;
@@ -661,7 +660,7 @@ may_static void binder_enum (int from, int *ids, int length)
 		*scope.ids++ = -1;
 }
 
-may_static binder_node_t *binder_lookup_name(binder_node_t *from, char *name)
+may_static binder_node_t *binder_lookup_name (binder_node_t *from, char *name)
 {
 	binder_node_t *scan = from;
 
@@ -672,7 +671,7 @@ may_static binder_node_t *binder_lookup_name(binder_node_t *from, char *name)
 				return scan;
 		}
 		if (scan->child) {
-			binder_node_t *result = binder_lookup_name(scan->child, name);
+			binder_node_t *result = binder_lookup_name (scan->child, name);
 
 			if (result)
 				return result;
@@ -768,7 +767,7 @@ may_static binder_node_t *binder_lookup_item (binder_node_t *from, cronyx_binder
 	return NULL;
 }
 
-may_static binder_node_t *binder_add_node(int parent, const char *prefix, const char *alias, cronyx_binder_item_t *h,
+may_static binder_node_t *binder_add_node (int parent, const char *prefix, const char *alias, cronyx_binder_item_t *h,
 				    int order_total)
 {
 	binder_node_t *node, *walk;
@@ -781,7 +780,7 @@ may_static binder_node_t *binder_add_node(int parent, const char *prefix, const 
 	if (binder_lookup_item (&binder_root, h) != 0)
 		return NULL;
 
-	node = kzalloc (sizeof(*node), GFP_KERNEL);
+	node = kzalloc (sizeof (*node), GFP_KERNEL);
 	if (node == NULL)
 		return NULL;
 
@@ -798,7 +797,7 @@ may_static binder_node_t *binder_add_node(int parent, const char *prefix, const 
 		if (snprintf (h->alias, CRONYX_ITEM_MAXNAME,
 			      (order_total >= 0) ? "%s%d" : "%s", alias, order_total) >= CRONYX_ITEM_MAXNAME)
 			goto ballout;
-		if (binder_lookup_name(&binder_root, h->alias))
+		if (binder_lookup_name (&binder_root, h->alias))
 			goto ballout;
 	}
 
@@ -815,8 +814,8 @@ may_static binder_node_t *binder_add_node(int parent, const char *prefix, const 
 		l += 1 + strlen (traversal[i]);
 		if (l >= CRONYX_ITEM_MAXNAME)
 			goto ballout;
-		strcat(h->name, traversal[i]);
-		strcat(h->name, ".");
+		strcat (h->name, traversal[i]);
+		strcat (h->name, ".");
 	}
 
 	if (prefix) {
@@ -828,7 +827,7 @@ may_static binder_node_t *binder_add_node(int parent, const char *prefix, const 
 			goto ballout;
 	}
 
-	if (binder_lookup_name(&binder_root, h->name))
+	if (binder_lookup_name (&binder_root, h->name))
 		goto ballout;
 
 	do
@@ -846,11 +845,11 @@ may_static binder_node_t *binder_add_node(int parent, const char *prefix, const 
 	return node;
 
 ballout:
-	kfree(node);
+	kfree (node);
 	return NULL;
 }
 
-may_static int __binder_remove_node(binder_node_t *node)
+may_static int __binder_remove_node (binder_node_t *node)
 {
 	if (node->item->minor > 0)
 		minor2item[node->item->minor] = 0;
@@ -860,17 +859,17 @@ may_static int __binder_remove_node(binder_node_t *node)
 		binder_node_t *child = node->child;
 
 		node->child = child->next;
-		__binder_remove_node(child);
+		__binder_remove_node (child);
 	}
 	binder_total_items--;
 	BUG_ON (binder_total_items < 0);
 	node->item->id = 0;
-	kfree(node);
-	binder_put();
+	kfree (node);
+	binder_put ();
 	return 0;
 }
 
-may_static int binder_remove_node(binder_node_t *node)
+may_static int binder_remove_node (binder_node_t *node)
 {
 	binder_node_t **walk;
 	int error;
@@ -881,53 +880,51 @@ may_static int binder_remove_node(binder_node_t *node)
 			break;
 		}
 
-	error = __binder_remove_node(node);
+	error = __binder_remove_node (node);
 	binder_evolution++;
 	return error;
 }
 
-void cronyx_binder_register_protocol(cronyx_proto_t *t)
+void cronyx_binder_register_protocol (cronyx_proto_t *t)
 {
 	down (&binder_topology);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	t->next = proto_list;
 	proto_list = t;
-	binder_get();
+	binder_get ();
 	binder_kick_timers ();
-	binder_unlock();
+	binder_unlock ();
 	up (&binder_topology);
 	printk (KERN_DEBUG "cbinder: protocol `%s' added\n", t->name);
 }
 
-EXPORT_SYMBOL(cronyx_binder_register_protocol);
+EXPORT_SYMBOL (cronyx_binder_register_protocol);
 
 void cronyx_binder_unregister_protocol (cronyx_proto_t *t)
 {
 	cronyx_proto_t *h, *p;
 
 	down (&binder_topology);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	for (h = proto_list, p = 0; h; p = h, h = h->next)
 		if (h == t) {
-			binder_put();
+			binder_put ();
 			if (p == 0)
 				proto_list = h->next;
 			else
 				p->next = h->next;
 			break;
 		}
-	binder_unlock();
+	binder_unlock ();
 	up (&binder_topology);
 
 	printk (KERN_DEBUG "cbinder: protocol `%s' removed\n", t->name);
 }
 
-EXPORT_SYMBOL(cronyx_binder_unregister_protocol);
+EXPORT_SYMBOL (cronyx_binder_unregister_protocol);
 
-int cronyx_binder_register_item(int parent, const char *prefix,
-																int order_parent,
-																const char *alias,
-																int order_total, cronyx_binder_item_t *h)
+int cronyx_binder_register_item (int parent, const char *prefix, int order_parent, const char *alias, int order_total,
+				 cronyx_binder_item_t *h)
 {
 	int error;
 	binder_node_t *node;
@@ -936,24 +933,24 @@ int cronyx_binder_register_item(int parent, const char *prefix,
 		return -EINVAL;
 
 	down (&binder_topology);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	h->debug = Debug;
 	h->order = order_parent;
-	node = binder_add_node(parent, prefix, alias, h, order_total);
+	node = binder_add_node (parent, prefix, alias, h, order_total);
 	if (node) {
-		binder_get();
+		binder_get ();
 		binder_kick_timers ();
 		error = 0;
 	} else
 		error = -EINVAL;
-	binder_unlock();
+	binder_unlock ();
 	up (&binder_topology);
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_binder_register_item);
+EXPORT_SYMBOL (cronyx_binder_register_item);
 
-may_static int binder_try_free(binder_node_t *node)
+may_static int binder_try_free (binder_node_t *node)
 {
 	if (node->item) {
 		int running = node->item->running;
@@ -965,9 +962,9 @@ may_static int binder_try_free(binder_node_t *node)
 			node->item->proto = NULL;
 			if (node->item->dispatch.notify_proto_changed)
 				node->item->dispatch.notify_proto_changed (node->item);
-			binder_unlock();
-			schedule();
-			binder_deffered_flush_and_lock();
+			binder_unlock ();
+			schedule ();
+			binder_deffered_flush_and_lock ();
 			if (proto->detach (node->item) < 0) {
 				node->item->proto = proto;
 				if (node->item->dispatch.notify_proto_changed)
@@ -976,12 +973,12 @@ may_static int binder_try_free(binder_node_t *node)
 					node->item->dispatch.link_up (node->item);
 				return 1;
 			} else
-				binder_provider_put(node->item);
+				binder_provider_put (node->item);
 		}
 	}
 
 	for (node = node->child; node != 0; node = node->next)
-		if (binder_try_free(node))
+		if (binder_try_free (node))
 			return 1;
 
 	return 0;
@@ -993,23 +990,23 @@ int cronyx_binder_unregister_item (int id)
 	binder_node_t *node;
 
 	down (&binder_topology);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 
 	node = binder_lookup_id (&binder_root, id);
 	if (node == NULL || node->parent == NULL)
 		error = -ENOENT;
-	else if (binder_try_free(node))
+	else if (binder_try_free (node))
 		error = -EBUSY;
 	else
-		error = binder_remove_node(node);
+		error = binder_remove_node (node);
 
-	binder_unlock();
+	binder_unlock ();
 	up (&binder_topology);
 
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_binder_unregister_item);
+EXPORT_SYMBOL (cronyx_binder_unregister_item);
 
 int cronyx_get_modem_status (cronyx_binder_item_t *h)
 {
@@ -1030,7 +1027,7 @@ int cronyx_get_modem_status (cronyx_binder_item_t *h)
 	return result;
 }
 
-EXPORT_SYMBOL(cronyx_get_modem_status);
+EXPORT_SYMBOL (cronyx_get_modem_status);
 
 may_static int binder_channel_ioctl (cronyx_binder_item_t *h, unsigned cmd, unsigned long arg)
 {
@@ -1038,7 +1035,7 @@ may_static int binder_channel_ioctl (cronyx_binder_item_t *h, unsigned cmd, unsi
 
 	switch (cmd) {
 		case TIOCMGET:
-			if (unlikely (!access_ok (VERIFY_WRITE, (void *) arg, sizeof(int))))
+			if (unlikely (!access_ok (VERIFY_WRITE, (void *) arg, sizeof (int))))
 				return -EFAULT;
 
 			put_user (cronyx_get_modem_status (h), (int *) arg);
@@ -1047,7 +1044,7 @@ may_static int binder_channel_ioctl (cronyx_binder_item_t *h, unsigned cmd, unsi
 		case TIOCMBIS:
 		case TIOCMBIC:
 		case TIOCMSET:
-			if (unlikely (!access_ok (VERIFY_READ, (void *) arg, sizeof(int))))
+			if (unlikely (!access_ok (VERIFY_READ, (void *) arg, sizeof (int))))
 				return -EFAULT;
 
 			/*
@@ -1085,17 +1082,17 @@ may_static int binder_channel_ioctl (cronyx_binder_item_t *h, unsigned cmd, unsi
 	}
 }
 
-may_static int binder_item_ctl(unsigned cmd, unsigned long arg, struct cronyx_ctl_t *ctl)
+may_static int binder_item_ctl (unsigned cmd, unsigned long arg, struct cronyx_ctl_t *ctl)
 {
 	cronyx_binder_item_t *h;
 	cronyx_proto_t *p;
 	int error, bytes_in, bytes_out;
 	binder_node_t *node;
 
-	bytes_in = sizeof(int) * 2;
+	bytes_in = sizeof (int) * 2;
 	if (IOC_IN & cmd) {
 		bytes_in = _IOC_SIZE (cmd);
-		if (bytes_in < sizeof(int) * 2)
+		if (bytes_in < sizeof (int) * 2)
 			return -ENOSYS;
 	}
 
@@ -1142,9 +1139,9 @@ may_static int binder_item_ctl(unsigned cmd, unsigned long arg, struct cronyx_ct
 					node->item->proto = NULL;
 					if (node->item->dispatch.notify_proto_changed)
 						node->item->dispatch.notify_proto_changed (node->item);
-					binder_unlock();
-					schedule();
-					binder_deffered_flush_and_lock();
+					binder_unlock ();
+					schedule ();
+					binder_deffered_flush_and_lock ();
 					error = proto->detach (h);
 					if (error < 0) {
 						node->item->proto = proto;
@@ -1153,19 +1150,19 @@ may_static int binder_item_ctl(unsigned cmd, unsigned long arg, struct cronyx_ct
 						return error;
 					}
 					if (p == NULL)
-						binder_provider_put(h);
+						binder_provider_put (h);
 				} else if (p != NULL)
-					binder_provider_get(h);
+					binder_provider_get (h);
 				if (p != NULL) {
-					binder_unlock();
+					binder_unlock ();
 					error = p->attach ? p->attach (h) : -ENOENT;
 					if (error >= 0) {
 						h->proto = p;
 						if (node->item->dispatch.notify_proto_changed)
 							node->item->dispatch.notify_proto_changed (node->item);
 					} else
-						binder_provider_put(h);
-					binder_deffered_flush_and_lock();
+						binder_provider_put (h);
+					binder_deffered_flush_and_lock ();
 				}
 			}
 		}
@@ -1191,18 +1188,18 @@ may_static int binder_item_ctl(unsigned cmd, unsigned long arg, struct cronyx_ct
 		if (h->type == CRONYX_ITEM_CHANNEL) {
 			if (h->proto) {
 				if (cmd == CRONYX_GET && h->proto->ctl_get)
-					error = h->proto->ctl_get(h, ctl);
+					error = h->proto->ctl_get (h, ctl);
 				if (cmd == CRONYX_SET && h->proto->ctl_set)
-					error = h->proto->ctl_set(h, ctl);
+					error = h->proto->ctl_set (h, ctl);
 				if (error != -ENOSYS && error < 0)
 					return error;
 			}
 		}
 		channel_error = -ENOSYS;
 		if (cmd == CRONYX_GET && h->dispatch.ctl_get)
-			channel_error = h->dispatch.ctl_get(h, ctl);
+			channel_error = h->dispatch.ctl_get (h, ctl);
 		if (cmd == CRONYX_SET && h->dispatch.ctl_set)
-			channel_error = h->dispatch.ctl_set(h, ctl);
+			channel_error = h->dispatch.ctl_set (h, ctl);
 		if (channel_error != -ENOSYS)
 			error = channel_error;
 	}
@@ -1212,14 +1209,14 @@ may_static int binder_item_ctl(unsigned cmd, unsigned long arg, struct cronyx_ct
 	return error;
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 9)
+#if LINUX_VERSION_CODE < KERNEL_VERSION (3, 4, 9)
 typedef int ioctl_return;
 #else
 typedef long ioctl_return;
 #endif
 
-may_static ioctl_return binder_ioctl(
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 9)
+may_static ioctl_return binder_ioctl (
+#if LINUX_VERSION_CODE < KERNEL_VERSION (3, 4, 9)
 		struct inode *inode,
 #endif
 		struct file *filp, unsigned cmd, unsigned long arg)
@@ -1231,7 +1228,7 @@ may_static ioctl_return binder_ioctl(
 	int error;
 
 	down (&binder_topology);
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 
 	error = 0;
 	switch (cmd) {
@@ -1239,7 +1236,7 @@ may_static ioctl_return binder_ioctl(
 			if (!access_ok (VERIFY_WRITE, (void *) arg, 256))
 				error = -EFAULT;
 			else if (copy_to_user ((void *) arg, CRONYX_VERSION_INFO,
-					       (256 < sizeof(CRONYX_VERSION_INFO) ? 256 : sizeof(CRONYX_VERSION_INFO))))
+					       (256 < sizeof (CRONYX_VERSION_INFO) ? 256 : sizeof (CRONYX_VERSION_INFO))))
 				error = -EFAULT;
 			break;
 
@@ -1247,59 +1244,59 @@ may_static ioctl_return binder_ioctl(
 #if LINUX_VERSION_CODE < 0x020600
 			if (!suser ())
 #else
-			if (!capable(CAP_SYS_ADMIN))
+			if (!capable (CAP_SYS_ADMIN))
 #endif
 				error = -EPERM;
-			else if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof(int)))
+			else if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof (int)))
 				error = -EFAULT;
-			else if (copy_from_user (&binder_push_evolution, (void *) arg, sizeof(int)))
+			else if (copy_from_user (&binder_push_evolution, (void *) arg, sizeof (int)))
 				error = -EFAULT;
 			break;
 
 		case CRONYX_ITEM_ENUM:
-			if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof(struct cronyx_binder_enum_t)))
+			if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof (struct cronyx_binder_enum_t)))
 				error = -EFAULT;
 			else {
 				struct cronyx_binder_enum_t *user_enum =
-					kzalloc (sizeof(struct cronyx_binder_enum_t), GFP_KERNEL);
+					kzalloc (sizeof (struct cronyx_binder_enum_t), GFP_KERNEL);
 				if (!user_enum)
 					error = -ENOMEM;
-				else if (copy_from_user (&user_enum->from, (void *) arg, sizeof(int)))
+				else if (copy_from_user (&user_enum->from, (void *) arg, sizeof (int)))
 					error = -EFAULT;
 				else if (user_enum->from > binder_total_items)
 					error = -EINVAL;
 				else {
 					binder_enum (user_enum->from, user_enum->ids,
-						     sizeof(user_enum->ids) / sizeof(user_enum->ids[0]));
+						     sizeof (user_enum->ids) / sizeof (user_enum->ids[0]));
 					user_enum->total = binder_total_items;
 					user_enum->evolution = binder_evolution;
 					user_enum->push = binder_push_evolution;
 					if (copy_to_user
-					    ((void *) arg, user_enum, sizeof(struct cronyx_binder_enum_t)))
+					    ((void *) arg, user_enum, sizeof (struct cronyx_binder_enum_t)))
 						error = -EFAULT;
-					kfree(user_enum);
+					kfree (user_enum);
 				}
 			}
 			break;
 
 		case CRONYX_ITEM_INFO:
-			if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof(struct cronyx_item_info_t)))
+			if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof (struct cronyx_item_info_t)))
 				error = -EFAULT;
 			else {
 				struct cronyx_item_info_t *item_info =
-					kzalloc (sizeof(struct cronyx_item_info_t), GFP_KERNEL);
+					kzalloc (sizeof (struct cronyx_item_info_t), GFP_KERNEL);
 
 				if (!item_info)
 					error = -ENOMEM;
 				else {
 					if (copy_from_user
-					    (item_info, (void *) arg, sizeof(struct cronyx_item_info_t)))
+					    (item_info, (void *) arg, sizeof (struct cronyx_item_info_t)))
 						error = -EFAULT;
 					else {
 						if (item_info->id)
 							node = binder_lookup_id (&binder_root, item_info->id);
 						else {
-							node = binder_lookup_name(&binder_root, item_info->name);
+							node = binder_lookup_name (&binder_root, item_info->name);
 							if (node == NULL)
 								node = binder_lookup_partial (item_info->name, &error);
 						}
@@ -1307,9 +1304,9 @@ may_static ioctl_return binder_ioctl(
 							error = -ENOENT;
 						if (error >= 0) {
 							h = node->item;
-							strncpy (item_info->name, h->name, sizeof(item_info->name));
+							strncpy (item_info->name, h->name, sizeof (item_info->name));
 							strncpy (item_info->alias, h->alias,
-								 sizeof(item_info->alias));
+								 sizeof (item_info->alias));
 							item_info->id = h->id;
 							item_info->parent =
 								node->parent->item ? node->parent->item->id : 0;
@@ -1319,40 +1316,40 @@ may_static ioctl_return binder_ioctl(
 							item_info->order = h->order;
 							if (copy_to_user
 							    ((void *) arg, item_info,
-							     sizeof(struct cronyx_item_info_t)))
+							     sizeof (struct cronyx_item_info_t)))
 								error = -EFAULT;
 						}
 					}
-					kfree(item_info);
+					kfree (item_info);
 				}
 			}
 			break;
 
 		case CRONYX_SELF_INFO:
-			node = inode2node(inode);
+			node = inode2node (inode);
 			if (node == NULL || node->item == NULL)
 				error = -ENODEV;
-			else if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof(struct cronyx_item_info_t)))
+			else if (!access_ok (VERIFY_WRITE, (void *) arg, sizeof (struct cronyx_item_info_t)))
 				error = -EFAULT;
 			else {
 				struct cronyx_item_info_t *item_info =
-					kzalloc (sizeof(struct cronyx_item_info_t), GFP_KERNEL);
+					kzalloc (sizeof (struct cronyx_item_info_t), GFP_KERNEL);
 
 				if (!item_info)
 					error = -ENOMEM;
 				else {
 					h = node->item;
-					strncpy (item_info->name, h->name, sizeof(item_info->name));
-					strncpy (item_info->alias, h->alias, sizeof(item_info->alias));
+					strncpy (item_info->name, h->name, sizeof (item_info->name));
+					strncpy (item_info->alias, h->alias, sizeof (item_info->alias));
 					item_info->id = h->id;
 					item_info->parent = node->parent->item ? node->parent->item->id : 0;
 					item_info->minor = h->minor;
 					item_info->svc = h->svc;
 					item_info->type = h->type;
 					item_info->order = h->order;
-					if (copy_to_user ((void *) arg, item_info, sizeof(struct cronyx_item_info_t)))
+					if (copy_to_user ((void *) arg, item_info, sizeof (struct cronyx_item_info_t)))
 						error = -EFAULT;
-					kfree(item_info);
+					kfree (item_info);
 				}
 			}
 			break;
@@ -1361,30 +1358,30 @@ may_static ioctl_return binder_ioctl(
 #if LINUX_VERSION_CODE < 0x020600
 			if (!suser ()) {
 #else
-			if (!capable(CAP_SYS_ADMIN)) {
+			if (!capable (CAP_SYS_ADMIN)) {
 #endif
 				error = -EPERM;
 				break;
 			}
 		case CRONYX_GET:
-			ctl = kzalloc (sizeof(struct cronyx_ctl_t), GFP_KERNEL);
+			ctl = kzalloc (sizeof (struct cronyx_ctl_t), GFP_KERNEL);
 			if (!ctl)
 				error = -ENOMEM;
 			else {
-				error = binder_item_ctl(cmd, arg, ctl);
-				kfree(ctl);
+				error = binder_item_ctl (cmd, arg, ctl);
+				kfree (ctl);
 			}
 			break;
 
 		default:
-			node = inode2node(inode);
+			node = inode2node (inode);
 			if (node == NULL || node->item == NULL)
 				error = -ENODEV;
 			else
 				error = binder_channel_ioctl (node->item, cmd, arg);
 	}
 
-	binder_unlock();
+	binder_unlock ();
 	up (&binder_topology);
 	return error;
 }
@@ -1393,48 +1390,48 @@ may_static int binder_open (struct inode *inode, struct file *file)
 {
 	binder_node_t *node;
 
-	binder_deffered_flush_and_lock();
-	node = inode2node(inode);
+	binder_deffered_flush_and_lock ();
+	node = inode2node (inode);
 	if (node == 0) {
-		binder_unlock();
+		binder_unlock ();
 		return -ENODEV;
 	}
 	if (node->item && node->item->type == CRONYX_ITEM_CHANNEL) {
 		if (!node->item->proto) {
-			binder_unlock();
+			binder_unlock ();
 			return -EINVAL;
 		}
 		if (node->item->proto->open) {
 			int error = node->item->proto->open (node->item);
 
 			if (error < 0) {
-				binder_unlock();
+				binder_unlock ();
 				return error;
 			}
 		}
 	}
-	binder_get();
-	binder_unlock();
+	binder_get ();
+	binder_unlock ();
 	return 0;
 }
 
-may_static int binder_release(struct inode *inode, struct file *file)
+may_static int binder_release (struct inode *inode, struct file *file)
 {
 	binder_node_t *node;
 
-	binder_deffered_flush_and_lock();
-	node = inode2node(inode);
+	binder_deffered_flush_and_lock ();
+	node = inode2node (inode);
 	if (node == 0) {
-		binder_unlock();
+		binder_unlock ();
 		return -ENODEV;
 	}
 	if (node->item && node->item->type == CRONYX_ITEM_CHANNEL && node->item->proto) {
 		fasync_helper (-1, file, 0, &node->item->proto->fasync);
 		if (node->item->proto->release)
-			node->item->proto->release(node->item);
+			node->item->proto->release (node->item);
 	}
-	binder_unlock();
-	binder_put();
+	binder_unlock ();
+	binder_put ();
 	return 0;
 }
 
@@ -1462,7 +1459,7 @@ may_static ssize_t binder_read (struct file *filp, char *buf, size_t len, loff_t
 	return h->proto->read (h, filp->f_flags, buf, len);
 }
 
-may_static ssize_t binder_write(struct file *filp, const char *buf, size_t len, loff_t *offset)
+may_static ssize_t binder_write (struct file *filp, const char *buf, size_t len, loff_t *offset)
 {
 	struct inode *inode = filp->f_dentry->d_inode;
 	cronyx_binder_item_t *h = inode2chan (inode);
@@ -1470,7 +1467,7 @@ may_static ssize_t binder_write(struct file *filp, const char *buf, size_t len, 
 	if (!h || !h->proto || !h->proto->write)
 		return -EINVAL;
 
-	return h->proto->write(h, filp->f_flags, buf, len);
+	return h->proto->write (h, filp->f_flags, buf, len);
 }
 
 may_static unsigned binder_poll (struct file *filp, struct poll_table_struct *st)
@@ -1480,7 +1477,7 @@ may_static unsigned binder_poll (struct file *filp, struct poll_table_struct *st
 
 	if (!h || !h->proto || !h->proto->select)
 		return 0;
-	return h->proto->select(h, st, filp);
+	return h->proto->select (h, st, filp);
 }
 
 may_static int binder_fasync (int fd, struct file *filp, int on)
@@ -1502,7 +1499,7 @@ may_static struct file_operations binder_fops = {
 	.read = binder_read,
 	.write = binder_write,
 	.poll = binder_poll,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 9)
+#if LINUX_VERSION_CODE < KERNEL_VERSION (3, 4, 9)
 	.ioctl = binder_ioctl,
 #else
 	.compat_ioctl = binder_ioctl,
@@ -1520,18 +1517,18 @@ char *cronyx_format_irq (int raw_irq, int apic_irq)
 	static char buffer[32];
 
 	if (raw_irq <= 0)
-		snprintf (buffer, sizeof(buffer) - 1, (apic_irq > 0) ? "%d" : "<none>", apic_irq);
+		snprintf (buffer, sizeof (buffer) - 1, (apic_irq > 0) ? "%d" : "<none>", apic_irq);
 	else if (raw_irq == apic_irq)
-		snprintf (buffer, sizeof(buffer) - 1, "%d", apic_irq);
+		snprintf (buffer, sizeof (buffer) - 1, "%d", apic_irq);
 	else
-		snprintf (buffer, sizeof(buffer) - 1, (apic_irq > 0) ? "%d/apic-%d" : "%d/apic-<none>", raw_irq,
+		snprintf (buffer, sizeof (buffer) - 1, (apic_irq > 0) ? "%d/apic-%d" : "%d/apic-<none>", raw_irq,
 			  apic_irq);
 	return buffer;
 }
 
-EXPORT_SYMBOL(cronyx_format_irq);
+EXPORT_SYMBOL (cronyx_format_irq);
 
-int cronyx_binder_minor_get(cronyx_binder_item_t *h, int svc)
+int cronyx_binder_minor_get (cronyx_binder_item_t *h, int svc)
 {
 	h->svc = svc;
 	if (h->minor < CRONYX_CONTROL_DEVICE) {
@@ -1557,9 +1554,9 @@ int cronyx_binder_minor_get(cronyx_binder_item_t *h, int svc)
 	return 0;
 }
 
-EXPORT_SYMBOL(cronyx_binder_minor_get);
+EXPORT_SYMBOL (cronyx_binder_minor_get);
 
-void cronyx_binder_minor_put(cronyx_binder_item_t *h)
+void cronyx_binder_minor_put (cronyx_binder_item_t *h)
 {
 	if (h->minor > CRONYX_CONTROL_DEVICE) {
 		if (minor2item[h->minor]->item == h)
@@ -1570,74 +1567,74 @@ void cronyx_binder_minor_put(cronyx_binder_item_t *h)
 	}
 }
 
-EXPORT_SYMBOL(cronyx_binder_minor_put);
+EXPORT_SYMBOL (cronyx_binder_minor_put);
 
-int cronyx_param_get(cronyx_binder_item_t *h, int id, long *value)
+int cronyx_param_get (cronyx_binder_item_t *h, int id, long *value)
 {
 	int error;
-	struct cronyx_ctl_t *ctl = kzalloc (sizeof(struct cronyx_ctl_t), GFP_KERNEL);
+	struct cronyx_ctl_t *ctl = kzalloc (sizeof (struct cronyx_ctl_t), GFP_KERNEL);
 
 	if (ctl == NULL)
 		return -ENOMEM;
 	ctl->param_id = id;
-	error = cronyx_ctl_get(h, ctl);
+	error = cronyx_ctl_get (h, ctl);
 	if (error >= 0)
 		*value = ctl->u.param.value;
-	kfree(ctl);
+	kfree (ctl);
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_param_get);
+EXPORT_SYMBOL (cronyx_param_get);
 
-int cronyx_param_set(cronyx_binder_item_t *h, int id, long value)
+int cronyx_param_set (cronyx_binder_item_t *h, int id, long value)
 {
 	int error;
-	struct cronyx_ctl_t *ctl = kzalloc (sizeof(struct cronyx_ctl_t), GFP_KERNEL);
+	struct cronyx_ctl_t *ctl = kzalloc (sizeof (struct cronyx_ctl_t), GFP_KERNEL);
 
 	if (ctl == NULL)
 		return -ENOMEM;
 	ctl->param_id = id;
 	ctl->u.param.value = value;
-	error = cronyx_ctl_set(h, ctl);
-	kfree(ctl);
+	error = cronyx_ctl_set (h, ctl);
+	kfree (ctl);
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_param_set);
+EXPORT_SYMBOL (cronyx_param_set);
 
-int cronyx_ctl_get(cronyx_binder_item_t *h, struct cronyx_ctl_t *ctl)
+int cronyx_ctl_get (cronyx_binder_item_t *h, struct cronyx_ctl_t *ctl)
 {
 	int error;
 
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	error = -ENOSYS;
 	if (h->dispatch.ctl_get)
-		error = h->dispatch.ctl_get(h, ctl);
-	binder_unlock();
+		error = h->dispatch.ctl_get (h, ctl);
+	binder_unlock ();
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_ctl_get);
+EXPORT_SYMBOL (cronyx_ctl_get);
 
-int cronyx_ctl_set(cronyx_binder_item_t *h, struct cronyx_ctl_t *ctl)
+int cronyx_ctl_set (cronyx_binder_item_t *h, struct cronyx_ctl_t *ctl)
 {
 	int error;
 
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	error = -ENOSYS;
 	if (h->dispatch.ctl_set)
-		error = h->dispatch.ctl_set(h, ctl);
+		error = h->dispatch.ctl_set (h, ctl);
 
-	binder_unlock();
+	binder_unlock ();
 	binder_deffered_flush ();
 	return error;
 }
 
-EXPORT_SYMBOL(cronyx_ctl_set);
+EXPORT_SYMBOL (cronyx_ctl_set);
 
 int binder_deffered_queue1 (cronyx_binder_item_t *h, char *reason, void (*call) (cronyx_binder_item_t *))
 {
-	struct binder_deffered_t *d = binder_alloc_deffered(reason);
+	struct binder_deffered_t *d = binder_alloc_deffered (reason);
 
 	if (!d)
 		return -ENOMEM;
@@ -1645,15 +1642,15 @@ int binder_deffered_queue1 (cronyx_binder_item_t *h, char *reason, void (*call) 
 	d->param_1 = h;
 	d->param_2 = d;
 	d->call._2 = (void (*)(void *, void *)) call;
-	binder_deffered_queue(d);
+	binder_deffered_queue (d);
 	return 0;
 }
 
-EXPORT_SYMBOL(binder_deffered_queue1);
+EXPORT_SYMBOL (binder_deffered_queue1);
 
 int binder_deffered_queue2 (cronyx_binder_item_t *h, char *reason, void (*call) (cronyx_binder_item_t *, void *), void *param)
 {
-	struct binder_deffered_t *d = binder_alloc_deffered(reason);
+	struct binder_deffered_t *d = binder_alloc_deffered (reason);
 
 	if (!d)
 		return -ENOMEM;
@@ -1661,21 +1658,21 @@ int binder_deffered_queue2 (cronyx_binder_item_t *h, char *reason, void (*call) 
 	d->param_1 = h;
 	d->param_2 = param;
 	d->call._2 = (void (*)(void *, void *)) call;
-	binder_deffered_queue(d);
+	binder_deffered_queue (d);
 	return 0;
 }
 
-EXPORT_SYMBOL(binder_deffered_queue2);
+EXPORT_SYMBOL (binder_deffered_queue2);
 
-void cronyx_receive(cronyx_binder_item_t *h, struct sk_buff *skb)
+void cronyx_receive (cronyx_binder_item_t *h, struct sk_buff *skb)
 {
 	cronyx_proto_t *proto = h->proto;
 
 	if (proto && proto->notify_receive) {
 		if (proto->dispatch_priority)
-			proto->notify_receive(h, skb);
+			proto->notify_receive (h, skb);
 		else {
-			struct binder_deffered_t *d = binder_alloc_deffered("receive");
+			struct binder_deffered_t *d = binder_alloc_deffered ("receive");
 
 			if (unlikely (d == NULL))
 				dev_kfree_skb_any (skb);
@@ -1683,14 +1680,14 @@ void cronyx_receive(cronyx_binder_item_t *h, struct sk_buff *skb)
 				d->param_1 = h;
 				d->param_2 = skb;
 				d->call._2 = (void (*)(void *, void *)) proto->notify_receive;
-				binder_deffered_queue(d);
+				binder_deffered_queue (d);
 			}
 		}
 	} else
 		dev_kfree_skb_any (skb);
 }
 
-EXPORT_SYMBOL(cronyx_receive);
+EXPORT_SYMBOL (cronyx_receive);
 
 void cronyx_receive_error (cronyx_binder_item_t *h, int errcode)
 {
@@ -1700,63 +1697,63 @@ void cronyx_receive_error (cronyx_binder_item_t *h, int errcode)
 		if (proto->dispatch_priority)
 			proto->notify_receive_error (h, errcode);
 		else {
-			struct binder_deffered_t *d = binder_alloc_deffered("receive_error");
+			struct binder_deffered_t *d = binder_alloc_deffered ("receive_error");
 
 			if (likely (d != NULL)) {
 				d->param_1 = h;
 				d->param_2 = (void *) (unsigned long) errcode;
 				d->call._2 = (void (*)(void *, void *)) proto->notify_receive_error;
-				binder_deffered_queue(d);
+				binder_deffered_queue (d);
 			}
 		}
 	}
 }
 
-EXPORT_SYMBOL(cronyx_receive_error);
+EXPORT_SYMBOL (cronyx_receive_error);
 
-void cronyx_transmit_done(cronyx_binder_item_t *h)
+void cronyx_transmit_done (cronyx_binder_item_t *h)
 {
 	cronyx_proto_t *proto = h->proto;
 
 	if (proto && proto->notify_transmit_done) {
 		if (proto->dispatch_priority)
-			proto->notify_transmit_done(h);
+			proto->notify_transmit_done (h);
 		else {
-			struct binder_deffered_t *d = binder_alloc_deffered("transmit");
+			struct binder_deffered_t *d = binder_alloc_deffered ("transmit");
 
 			if (likely (d != NULL)) {
 				d->param_2 = d;
 				d->param_1 = h;
 				d->call._1 = (void (*)(void *)) proto->notify_transmit_done;
-				binder_deffered_queue(d);
+				binder_deffered_queue (d);
 			}
 		}
 	}
 }
 
-EXPORT_SYMBOL(cronyx_transmit_done);
+EXPORT_SYMBOL (cronyx_transmit_done);
 
-void cronyx_modem_event(cronyx_binder_item_t *h)
+void cronyx_modem_event (cronyx_binder_item_t *h)
 {
 	cronyx_proto_t *proto = h->proto;
 
 	if (proto && proto->notify_modem_event) {
 		if (proto->dispatch_priority)
-			proto->notify_modem_event(h);
+			proto->notify_modem_event (h);
 		else {
-			struct binder_deffered_t *d = binder_alloc_deffered("modem_event");
+			struct binder_deffered_t *d = binder_alloc_deffered ("modem_event");
 
 			if (likely (d != NULL)) {
 				d->param_2 = d;
 				d->param_1 = h;
 				d->call._1 = (void (*)(void *)) proto->notify_modem_event;
-				binder_deffered_queue(d);
+				binder_deffered_queue (d);
 			}
 		}
 	}
 }
 
-EXPORT_SYMBOL(cronyx_modem_event);
+EXPORT_SYMBOL (cronyx_modem_event);
 
 void cronyx_transmit_error (cronyx_binder_item_t *h, int errcode)
 {
@@ -1766,19 +1763,19 @@ void cronyx_transmit_error (cronyx_binder_item_t *h, int errcode)
 		if (proto->dispatch_priority)
 			proto->notify_transmit_error (h, errcode);
 		else {
-			struct binder_deffered_t *d = binder_alloc_deffered("transmit_error");
+			struct binder_deffered_t *d = binder_alloc_deffered ("transmit_error");
 
 			if (likely (d != NULL)) {
 				d->param_1 = h;
 				d->param_2 = (void *) (unsigned long) errcode;
 				d->call._2 = (void (*)(void *, void *)) proto->notify_transmit_error;
-				binder_deffered_queue(d);
+				binder_deffered_queue (d);
 			}
 		}
 	}
 }
 
-EXPORT_SYMBOL(cronyx_transmit_error);
+EXPORT_SYMBOL (cronyx_transmit_error);
 
 #if LINUX_VERSION_CODE < 0x02060E
 void *cronyx_kzalloc (size_t size, unsigned flags)
@@ -1786,11 +1783,11 @@ void *cronyx_kzalloc (size_t size, unsigned flags)
 	void *p = kmalloc (size, flags);
 
 	if (likely (p != 0))
-		memset(p, 0, size);
+		memset (p, 0, size);
 	return p;
 }
 
-EXPORT_SYMBOL(cronyx_kzalloc);
+EXPORT_SYMBOL (cronyx_kzalloc);
 #endif
 
 #if LINUX_VERSION_CODE >= 0x020613
@@ -1801,24 +1798,24 @@ may_static irqreturn_t dummy_irq_handler (int irq, void *lock, struct pt_regs *r
 may_static void dummy_irq_handler (int irq, void *lock, struct pt_regs *regs)
 #endif
 {
-	spin_lock((spinlock_t *) lock);
-	spin_unlock((spinlock_t *) lock);
+	spin_lock ((spinlock_t *) lock);
+	spin_unlock ((spinlock_t *) lock);
 #if LINUX_VERSION_CODE >= 0x020600
 	return IRQ_HANDLED;
 #endif
 }
 
-int cronyx_probe_irq(int irq, void *ptr, void (*irq_updown) (void *, int))
+int cronyx_probe_irq (int irq, void *ptr, void (*irq_updown) (void *, int))
 {
 	int count, probe;
 	unsigned long mask, flags;
 	spinlock_t lock;
 
-	spin_lock_init(&lock);
+	spin_lock_init (&lock);
 	for (count = 0; count < 5; count++) {
-		spin_lock_irqsave(&lock, flags);
+		spin_lock_irqsave (&lock, flags);
 		irq_updown (ptr, -1);
-		spin_unlock_irqrestore(&lock, flags);
+		spin_unlock_irqrestore (&lock, flags);
 		udelay (100);
 		mask = probe_irq_on ();
 		probe = probe_irq_off (mask);
@@ -1828,14 +1825,14 @@ int cronyx_probe_irq(int irq, void *ptr, void (*irq_updown) (void *, int))
 			free_irq (irq, &lock);
 			for (count = 0; count < 5; count++) {
 				mask = probe_irq_on ();
-				spin_lock_irqsave(&lock, flags);
+				spin_lock_irqsave (&lock, flags);
 				irq_updown (ptr, irq);
-				spin_unlock_irqrestore(&lock, flags);
+				spin_unlock_irqrestore (&lock, flags);
 				udelay (100);
 				probe = probe_irq_off (mask);
-				spin_lock_irqsave(&lock, flags);
+				spin_lock_irqsave (&lock, flags);
 				irq_updown (ptr, -1);
-				spin_unlock_irqrestore(&lock, flags);
+				spin_unlock_irqrestore (&lock, flags);
 				udelay (100);
 				if (probe > 0 && probe == irq)
 					return 1;
@@ -1846,7 +1843,7 @@ int cronyx_probe_irq(int irq, void *ptr, void (*irq_updown) (void *, int))
 	return 0;
 }
 
-EXPORT_SYMBOL(cronyx_probe_irq);
+EXPORT_SYMBOL (cronyx_probe_irq);
 
 #if (LINUX_VERSION_CODE >= 0x020600) && (LINUX_VERSION_CODE < 0x020611)
 
@@ -1857,19 +1854,19 @@ void *cronyx_mempool_kmalloc (int gfp_mask, void *pool_data)
 	return kmalloc (size, gfp_mask);
 }
 
-void cronyx_mempool_kfree(void *element, void *pool_data)
+void cronyx_mempool_kfree (void *element, void *pool_data)
 {
-	kfree(element);
+	kfree (element);
 }
 
-EXPORT_SYMBOL(cronyx_mempool_kmalloc);
-EXPORT_SYMBOL(cronyx_mempool_kfree);
+EXPORT_SYMBOL (cronyx_mempool_kmalloc);
+EXPORT_SYMBOL (cronyx_mempool_kfree);
 
 #endif
 
 //-----------------------------------------------------------------------------
 
-int init_module(void)
+int init_module (void)
 {
 	if (register_chrdev (CRONYX_MJR_BINDER, "cronyx/binder", &binder_fops)) {
 		printk (KERN_ERR "cbinder: can not registered with major %d.\n", CRONYX_MJR_BINDER);
@@ -1883,11 +1880,11 @@ int init_module(void)
 	binder_work.routine = binder_deffered;
 #else /* LINUX_VERSION_CODE < 0x020600 */
 	pool_deffered_item = mempool_create_kmalloc_pool (64,
-		sizeof(struct binder_deffered_t));
+		sizeof (struct binder_deffered_t));
 	if (!pool_deffered_item)
 		return -ENOMEM;
 #	if defined (CONFIG_SMP)
-	binder_queue = create_singlethread_workqueue("cronyx/wq");
+	binder_queue = create_singlethread_workqueue ("cronyx/wq");
 	if (!binder_queue) {
 		mempool_destroy (pool_deffered_item);
 		printk (KERN_ERR "cbinder: unable create workqueue.\n");
@@ -1903,25 +1900,25 @@ int init_module(void)
 	return 0;
 }
 
-void cleanup_module(void)
+void cleanup_module (void)
 {
 	printk (KERN_DEBUG "cbinder: cleanup\n");
 	unregister_chrdev (CRONYX_MJR_BINDER, "cronyx/binder");
 	BUG_ON (!list_empty (&leds_list));
 	BUG_ON (binder_root.child);
 
-	binder_deffered_flush_and_lock();
+	binder_deffered_flush_and_lock ();
 	del_timer_sync (&second_timer);
 	del_timer_sync (&led_timer);
 	BUG_ON (!list_empty (&deffered_list));
 
 #if LINUX_VERSION_CODE >= 0x020600
 #ifdef CONFIG_SMP
-	destroy_workqueue(binder_queue);
+	destroy_workqueue (binder_queue);
 #endif
 	mempool_destroy (pool_deffered_item);
 #endif /* LINUX_VERSION_CODE >= 0x020600 && defined (CONFIG_SMP) */
 
 	printk (KERN_DEBUG "cbinder: module unloaded\n");
-	binder_unlock();
+	binder_unlock ();
 }

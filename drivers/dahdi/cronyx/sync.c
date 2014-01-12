@@ -27,7 +27,7 @@
 #include <linux/tty_driver.h>
 #include <linux/serial.h>
 #if LINUX_VERSION_CODE < 0x020600
-	#include <linux/devfs_fs_kernel.h>
+#	include <linux/devfs_fs_kernel.h>
 #endif
 #include "cserial.h"
 
@@ -36,11 +36,11 @@ MODULE_DESCRIPTION ("Cronyx syncronous mode layer\n" CRONYX_VERSION_INFO "\n");
 MODULE_LICENSE ("Dual BSD/GPL");
 
 #ifndef TTY_DRIVER_NO_DEVFS
-	#define TTY_DRIVER_NO_DEVFS 0
+#	define TTY_DRIVER_NO_DEVFS 0
 #endif
 
 #ifndef TTY_DRIVER_DYNAMIC_DEV
-	#define TTY_DRIVER_DYNAMIC_DEV 0
+#	define TTY_DRIVER_DYNAMIC_DEV 0
 #endif
 
 typedef struct {

@@ -32,11 +32,11 @@
 #include "cserial.h"
 
 #ifndef CONFIG_PCI
-	#error "Cronyx Tau-PCI module required PCI-bus support."
+#	error "Cronyx Tau-PCI module required PCI-bus support."
 #endif
 
 #ifndef DMA_32BIT_MASK
-	#define DMA_32BIT_MASK 0x00000000FFFFFFFFull
+#	define DMA_32BIT_MASK 0x00000000FFFFFFFFull
 #endif
 
 #include "taupci-ddk.h"
@@ -86,7 +86,7 @@ static void taupci_reset_buggy_infineon20534 (taupci_adapter_t * b)
 	pci_read_config_dword (b->pdev, PCI_BASE_ADDRESS_1, &base2);
 	pci_read_config_dword (b->pdev, PCI_INTERRUPT_LINE, &intlin);
 
-	taupci_hard_reset(&b->ddk);
+	taupci_hard_reset (&b->ddk);
 	udelay (12);
 
 	pci_write_config_dword (b->pdev, PCI_COMMAND, stacmd);
@@ -97,27 +97,27 @@ static void taupci_reset_buggy_infineon20534 (taupci_adapter_t * b)
 }
 
 #if 0
-static void taupci_reset(taupci_adapter_t * b, int hard)
+static void taupci_reset (taupci_adapter_t * b, int hard)
 {
 	unsigned long flags;
 
-	spin_lock(&taupci_lock_driver);
+	spin_lock (&taupci_lock_driver);
 
 	spin_lock_irqsave (&b->lock, flags);
-	taupci_enable_interrupt(&b->ddk, 0);
+	taupci_enable_interrupt (&b->ddk, 0);
 	b->ddk.dead = -1;
 	spin_unlock_irqrestore (&b->lock, flags);
 
-	spin_unlock(&taupci_lock_driver);
+	spin_unlock (&taupci_lock_driver);
 
-	taupci_halt(&b->ddk);
+	taupci_halt (&b->ddk);
 	if (b->irq_apic) {
 		free_irq (b->pdev->irq, b);
 		b->irq_apic = 0;
 	}
 
 	taupci_reset_buggy_infineon20534 (b);
-	if (taupci_init(&b->ddk, b->ddk.num, b->ddk.base, b->iq, b->iq_dma))
+	if (taupci_init (&b->ddk, b->ddk.num, b->ddk.base, b->iq, b->iq_dma))
 		printk (KERN_ERR "cp: Adapter #%d - hardware broken, code: 0x%08x\n", b->binder_data.order, b->ddk.dead);
 	else if (request_irq (b->pdev->irq, taupci_isr, IRQF_SHARED, "Cronyx Tau-PCI", b)) {
 		printk (KERN_ERR "cp: Adapter #%d - can't get irq %s\n",
@@ -125,13 +125,13 @@ static void taupci_reset(taupci_adapter_t * b, int hard)
 	} else {
 		b->irq_apic = b->pdev->irq;
 		spin_lock_irqsave (&b->lock, flags);
-		taupci_enable_interrupt(&b->ddk, 1);
+		taupci_enable_interrupt (&b->ddk, 1);
 		spin_unlock_irqrestore (&b->lock, flags);
 	}
 }
 #endif
 
-static int taupci_ctl_get(cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
+static int taupci_ctl_get (cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
 {
 	int n, error;
 	taupci_chan_t *c, *i;
@@ -629,7 +629,7 @@ static int taupci_ctl_get(cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
 	return error;
 }
 
-static int taupci_ctl_set(cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
+static int taupci_ctl_set (cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
 {
 	int n, error;
 	taupci_chan_t *c, *i;
@@ -1104,10 +1104,10 @@ static int taupci_ctl_set(cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
 					i->e3tcv = 0;
 					i->e3csec_5 = 0;
 					i->e3tsec = 0;
-					memset(&i->currnt, 0, sizeof(i->currnt));
-					memset(&i->total, 0, sizeof(i->total));
-					memset(&i->interval, 0, sizeof(i->interval));
-					memset(&i->e3icv, 0, sizeof(i->e3icv));
+					memset (&i->currnt, 0, sizeof (i->currnt));
+					memset (&i->total, 0, sizeof (i->total));
+					memset (&i->interval, 0, sizeof (i->interval));
+					memset (&i->e3icv, 0, sizeof (i->e3icv));
 					break;
 				case CRONYX_ITEM_ADAPTER:
 					for (n = 0; n < TAUPCI_NCHAN; n++) {
@@ -1129,10 +1129,10 @@ static int taupci_ctl_set(cronyx_binder_item_t * item, struct cronyx_ctl_t *ctl)
 							c->e3tcv = 0;
 							c->e3csec_5 = 0;
 							c->e3tsec = 0;
-							memset(&c->currnt, 0, sizeof(c->currnt));
-							memset(&c->total, 0, sizeof(c->total));
-							memset(&c->interval, 0, sizeof(c->interval));
-							memset(&c->e3icv, 0, sizeof(c->e3icv));
+							memset (&c->currnt, 0, sizeof (c->currnt));
+							memset (&c->total, 0, sizeof (c->total));
+							memset (&c->interval, 0, sizeof (c->interval));
+							memset (&c->e3icv, 0, sizeof (c->e3icv));
 						}
 					}
 					break;
@@ -1215,7 +1215,7 @@ static int taupci_up (cronyx_binder_item_t * item)
 #if LINUX_VERSION_CODE < 0x020600
 	MOD_INC_USE_COUNT;
 #else
-	if (!try_module_get(THIS_MODULE))
+	if (!try_module_get (THIS_MODULE))
 		return -EAGAIN;
 #endif
 	spin_lock_irqsave (&b->lock, flags);
@@ -1225,7 +1225,7 @@ static int taupci_up (cronyx_binder_item_t * item)
 #if LINUX_VERSION_CODE < 0x020600
 		MOD_DEC_USE_COUNT;
 #else
-		module_put(THIS_MODULE);
+		module_put (THIS_MODULE);
 #endif
 		return 0;
 	}
@@ -1247,7 +1247,7 @@ static int taupci_up (cronyx_binder_item_t * item)
 #if LINUX_VERSION_CODE < 0x020600
 		MOD_DEC_USE_COUNT;
 #else
-		module_put(THIS_MODULE);
+		module_put (THIS_MODULE);
 #endif
 	}
 	return error;
@@ -1280,7 +1280,7 @@ static void taupci_down (cronyx_binder_item_t * item)
 			/* LY: (mad) Infineon PEB20534 need a couple of TXC ticks to change modem-signals. */
 			spin_unlock_irqrestore (&b->lock, flags);
 			set_current_state (TASK_UNINTERRUPTIBLE);
-			schedule_timeout(HZ / 100);
+			schedule_timeout (HZ / 100);
 			spin_lock_irqsave (&b->lock, flags);
 
 			taupci_poweroff_chan (c);
@@ -1290,13 +1290,13 @@ static void taupci_down (cronyx_binder_item_t * item)
 #if LINUX_VERSION_CODE < 0x020600
 		MOD_DEC_USE_COUNT;
 #else
-		module_put(THIS_MODULE);
+		module_put (THIS_MODULE);
 #endif
 	} else
 		spin_unlock_irqrestore (&b->lock, flags);
 }
 
-static int taupci_transmit(cronyx_binder_item_t * item, struct sk_buff *skb)
+static int taupci_transmit (cronyx_binder_item_t * item, struct sk_buff *skb)
 {
 	taupci_chan_t *c;
 	taupci_adapter_t *b;
@@ -1315,7 +1315,7 @@ static int taupci_transmit(cronyx_binder_item_t * item, struct sk_buff *skb)
 		return -EIO;	/* error */
 	}
 
-	switch (error = taupci_send_packet(c, skb->data, skb->len, NULL)) {
+	switch (error = taupci_send_packet (c, skb->data, skb->len, NULL)) {
 		case 0:
 			spin_unlock_irqrestore (&b->lock, flags);
 			CRONYX_LOG_2 (item, "cp: send %d bytes, tn:%d, te:%d\n", skb->len, c->tn, c->te);
@@ -1468,14 +1468,14 @@ static void irq_receive (taupci_chan_t * c, unsigned char *data, int len)
 		return;
 	}
 
-	skb_put(skb, len);
+	skb_put (skb, len);
 	memcpy (skb->data, data, len);
-	spin_unlock(&b->lock);
+	spin_unlock (&b->lock);
 	cronyx_receive (h, skb);
-	spin_lock(&b->lock);
+	spin_lock (&b->lock);
 }
 
-static void irq_transmit(taupci_chan_t * c, void *attachment, int len)
+static void irq_transmit (taupci_chan_t * c, void *attachment, int len)
 {
 	cronyx_binder_item_t *h = c->sys;
 	taupci_adapter_t *b = (taupci_adapter_t *) c->board;
@@ -1483,9 +1483,9 @@ static void irq_transmit(taupci_chan_t * c, void *attachment, int len)
 	CRONYX_LOG_2 (h, "cp: irq-transmit %d bytes, tn:%d, te:%d\n", len, c->tn, c->te);
 	cronyx_led_kick (&b->led_flasher, CRONYX_LEDMODE_4TX);
 	if (h->proto) {
-		spin_unlock(&b->lock);
+		spin_unlock (&b->lock);
 		cronyx_transmit_done (h);
-		spin_lock(&b->lock);
+		spin_lock (&b->lock);
 	}
 }
 
@@ -1496,7 +1496,7 @@ static void irq_error (taupci_chan_t * c, int data)
 
 	cronyx_led_kick (&b->led_flasher, CRONYX_LEDMODE_4ERR);
 	if (h->proto) {
-		spin_unlock(&b->lock);
+		spin_unlock (&b->lock);
 		switch (data) {
 			case TAUPCI_FRAME:
 				CRONYX_LOG_1 (h, "cp: framing error\n");
@@ -1522,11 +1522,11 @@ static void irq_error (taupci_chan_t * c, int data)
 				CRONYX_LOG_1 (h, "cp: error #%d\n", data);
 				break;
 		}
-		spin_lock(&b->lock);
+		spin_lock (&b->lock);
 	}
 }
 
-static void taupci_led_set(void *tag, int on)
+static void taupci_led_set (void *tag, int on)
 {
 	taupci_adapter_t *b = (taupci_adapter_t *) tag;
 
@@ -1575,9 +1575,9 @@ static int taupci_led_state (void *tag)
 	return result;
 }
 
-static struct device *taupci_get_device(cronyx_binder_item_t *h)
+static struct device *taupci_get_device (cronyx_binder_item_t *h)
 {
-	if(h && h->type==CRONYX_ITEM_ADAPTER)
+	if (h && h->type==CRONYX_ITEM_ADAPTER)
 		return &((taupci_adapter_t *)h->hw)->pdev->dev;
 	return NULL;
 }
@@ -1607,15 +1607,15 @@ static void taupci_isr (int irq, void *dev, struct pt_regs *regs)
 #endif
 	}
 
-	spin_lock(&b->lock);
+	spin_lock (&b->lock);
 	cronyx_led_kick (&b->led_flasher, CRONYX_LEDMODE_4IRQ);
-	if (taupci_handle_interrupt(&b->ddk) < 0) {
+	if (taupci_handle_interrupt (&b->ddk) < 0) {
 		printk (KERN_EMERG "cp: Adapter #%d - interrupt storm on '%s' at irq %d\n",
 			b->binder_data.order, b->ddk.name, b->pdev->irq);
-		taupci_enable_interrupt(&b->ddk, 0);
+		taupci_enable_interrupt (&b->ddk, 0);
 	}
 
-	spin_unlock(&b->lock);
+	spin_unlock (&b->lock);
 #if LINUX_VERSION_CODE >= 0x020600
 	return IRQ_HANDLED;
 #endif
@@ -1634,7 +1634,7 @@ static void taupci_second_timer (cronyx_binder_item_t * item)
 			taupci_e1_timer (c);
 		if (c->prev_status != c->status) {
 			c->prev_status = c->status;
-			cronyx_modem_event(item);
+			cronyx_modem_event (item);
 		}
 	}
 	spin_unlock_irqrestore (&((taupci_adapter_t *) c->board)->lock, flags);
@@ -1646,7 +1646,7 @@ static void taupci_timer5_proc (unsigned long arg)
 	taupci_adapter_t *b;
 	unsigned long flags;
 
-	spin_lock(&taupci_lock_driver);
+	spin_lock (&taupci_lock_driver);
 	n = 0;
 	list_for_each_entry (b, &adapters_list, entry) {
 		if (b->ddk.dead || b->ddk.model != TAUPCI_MODEL_1E3)
@@ -1662,7 +1662,7 @@ static void taupci_timer5_proc (unsigned long arg)
 		taupci_timer.expires = jiffies + (HZ + 1) / 5;
 		add_timer (&taupci_timer);
 	}
-	spin_unlock(&taupci_lock_driver);
+	spin_unlock (&taupci_lock_driver);
 }
 
 //static int taupci_get_e1ts_map (cronyx_binder_item_t * item, struct cronyx_e1ts_map_t *e1ts_map)
@@ -1741,20 +1741,20 @@ static void taucpi_freedma (taupci_adapter_t *b)
 	for (i = 0; i < TAUPCI_NCHAN; ++i) {
 		if (b->txb[i]) {
 			if (b->txb_dma[i])
-				pci_unmap_single (b->pdev, b->txb_dma[i], sizeof(taupci_buf_t), PCI_DMA_TODEVICE);
+				pci_unmap_single (b->pdev, b->txb_dma[i], sizeof (taupci_buf_t), PCI_DMA_TODEVICE);
 			kfree (b->txb[i]);
 		}
 		if (b->rxb[i]) {
 			if (b->rxb_dma[i])
-				pci_unmap_single (b->pdev, b->rxb_dma[i], sizeof(taupci_buf_t), PCI_DMA_FROMDEVICE);
+				pci_unmap_single (b->pdev, b->rxb_dma[i], sizeof (taupci_buf_t), PCI_DMA_FROMDEVICE);
 			kfree (b->rxb[i]);
 		}
 	}
 	if (b->iq)
-		pci_free_consistent(b->pdev, sizeof(taupci_iq_t), b->iq, b->iq_dma);
+		pci_free_consistent (b->pdev, sizeof (taupci_iq_t), b->iq, b->iq_dma);
 }
 
-static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *ident)
+static int __init taupci_probe (struct pci_dev *dev, const struct pci_device_id *ident)
 {
 	taupci_adapter_t *b;
 	taupci_chan_t *c;
@@ -1763,13 +1763,13 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 	unsigned long flags;
 
 	dev_counter++;
-	b = kzalloc (sizeof(*b), GFP_KERNEL);
+	b = kzalloc (sizeof (*b), GFP_KERNEL);
 	if (b == NULL) {
 		printk (KERN_ERR "cp: Adapter #%d - out of memory\n", dev_counter);
 		return -ENOMEM;
 	}
 
-	b->mem = pci_resource_start(dev, 0);
+	b->mem = pci_resource_start (dev, 0);
 	if (!request_mem_region (b->mem, TAUPCI_BAR1_SIZE, "Cronyx Tau-PCI")) {
 		printk (KERN_ERR "cp: Adapter #%d - io-region busy at 0x%lx, other driver (dscc4) loaded?\n",
 			b->binder_data.order, (unsigned long) b->mem);
@@ -1777,7 +1777,7 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 		goto ballout;
 	}
 
-	spin_lock_init(&b->lock);
+	spin_lock_init (&b->lock);
 	INIT_LIST_HEAD (&b->entry);
 	b->irq_raw = dev->irq;
 	b->pdev = dev;
@@ -1806,7 +1806,7 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 		goto ballout;
 	}
 
-	b->iq = pci_alloc_consistent(dev, sizeof(taupci_iq_t), &b->iq_dma);
+	b->iq = pci_alloc_consistent (dev, sizeof (taupci_iq_t), &b->iq_dma);
 	if (b->iq == 0) {
 		printk (KERN_ERR "cp: Adapter #%d - can't alloc IQ-buffers\n", b->binder_data.order);
 		goto ballout;
@@ -1816,11 +1816,11 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 	 * LY: We should download a firmware and reset buggy Infineon PEB20534.
 	 Then initialize adapter again.
 	 */
-	taupci_init(&b->ddk, dev_counter, vbase, b->iq, b->iq_dma);
-	taupci_halt(&b->ddk);
+	taupci_init (&b->ddk, dev_counter, vbase, b->iq, b->iq_dma);
+	taupci_halt (&b->ddk);
 	taupci_reset_buggy_infineon20534 (b);
 	pci_set_master (b->pdev);
-	if (taupci_init(&b->ddk, dev_counter, vbase, b->iq, b->iq_dma)) {
+	if (taupci_init (&b->ddk, dev_counter, vbase, b->iq, b->iq_dma)) {
 		printk (KERN_ERR "cp: Adapter #%d - hardware broken, code: 0x%08x\n", b->binder_data.order, b->ddk.dead);
 		goto ballout;
 	}
@@ -1832,7 +1832,7 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 	}
 	b->irq_apic = b->pdev->irq;
 
-	pci_set_drvdata(dev, b);
+	pci_set_drvdata (dev, b);
 	printk (KERN_INFO "cp: Adapter #%d <Cronyx %s> at 0x%lx irq %s\n", b->binder_data.order, b->ddk.name,
 		(unsigned long) b->mem, cronyx_format_irq (b->irq_raw, b->irq_apic));
 	if (b->ddk.model == 0) {
@@ -1843,14 +1843,14 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 	for (c = b->ddk.chan; c < b->ddk.chan + TAUPCI_NCHAN; ++c) {
 		if (c->type <= 0)
 			continue;
-		b->txb[c->num] = kmalloc (sizeof(taupci_buf_t), GFP_KERNEL | GFP_DMA);
-		b->rxb[c->num] = kmalloc (sizeof(taupci_buf_t), GFP_KERNEL | GFP_DMA);
+		b->txb[c->num] = kmalloc (sizeof (taupci_buf_t), GFP_KERNEL | GFP_DMA);
+		b->rxb[c->num] = kmalloc (sizeof (taupci_buf_t), GFP_KERNEL | GFP_DMA);
 		if (b->txb[c->num] == 0 || b->rxb[c->num] == 0) {
 			printk (KERN_ERR "cp: Adapter #%d - no memory for DMA-buffers\n", b->binder_data.order);
 			goto ballout;
 		}
-		b->txb_dma[c->num] = pci_map_single (b->pdev, b->txb[c->num], sizeof(taupci_buf_t), PCI_DMA_TODEVICE);
-		b->rxb_dma[c->num] = pci_map_single (b->pdev, b->rxb[c->num], sizeof(taupci_buf_t), PCI_DMA_FROMDEVICE);
+		b->txb_dma[c->num] = pci_map_single (b->pdev, b->txb[c->num], sizeof (taupci_buf_t), PCI_DMA_TODEVICE);
+		b->rxb_dma[c->num] = pci_map_single (b->pdev, b->rxb[c->num], sizeof (taupci_buf_t), PCI_DMA_FROMDEVICE);
 		if (b->txb_dma[c->num] == 0 || b->rxb_dma[c->num] == 0) {
 			printk (KERN_ERR "cp: Adapter #%d - can't map DMA-buffers to PCI\n", b->binder_data.order);
 			goto ballout;
@@ -1865,12 +1865,12 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 	b->binder_data.type = CRONYX_ITEM_ADAPTER;
 	b->binder_data.hw = b;
 	b->binder_data.provider = THIS_MODULE;
-	if (cronyx_binder_register_item(0, "taupci", dev_counter, NULL, -1, &b->binder_data) < 0) {
+	if (cronyx_binder_register_item (0, "taupci", dev_counter, NULL, -1, &b->binder_data) < 0) {
 		printk (KERN_ERR "cp: Adapter #%d - unable register on binder\n", b->binder_data.order);
 		goto ballout;
 	}
 
-	cronyx_led_init(&b->led_flasher, &b->lock, b, taupci_led_set, taupci_led_state);
+	cronyx_led_init (&b->led_flasher, &b->lock, b, taupci_led_set, taupci_led_state);
 	for (c = b->ddk.chan; c < b->ddk.chan + TAUPCI_NCHAN; ++c) {
 		if (c->type <= 0)
 			continue;
@@ -1884,7 +1884,7 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 			if (b->ddk.model <= TAUPCI_MODEL_LITE)
 				chan->order = -1;
 			if (cronyx_binder_register_item
-			    (b->binder_data.id, taupci_iface_name(c->type), c->num, NULL, -1, chan) < 0) {
+			    (b->binder_data.id, taupci_iface_name (c->type), c->num, NULL, -1, chan) < 0) {
 				printk (KERN_ERR "cp: Adapter #%d - unable register interface #%d on binder\n",
 					b->binder_data.order, c->num);
 			}
@@ -1905,7 +1905,7 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 			printk (KERN_ERR "cp: Adapter #%d - unable register channel #%d on binder\n",
 				b->binder_data.order, c->num);
 		} else {
-			taupci_register_transmit(c, &irq_transmit);
+			taupci_register_transmit (c, &irq_transmit);
 			taupci_register_receive (c, &irq_receive);
 			taupci_register_error (c, &irq_error);
 
@@ -1918,19 +1918,19 @@ static int __init taupci_probe(struct pci_dev *dev, const struct pci_device_id *
 		chan_counter++;
 	}
 
-	spin_lock_irqsave(&taupci_lock_driver, flags);
-	list_add_tail(&b->entry, &adapters_list);
-	spin_lock(&b->lock);
-	taupci_enable_interrupt(&b->ddk, 1);
-	spin_unlock(&b->lock);
-	spin_unlock_irqrestore(&taupci_lock_driver, flags);
+	spin_lock_irqsave (&taupci_lock_driver, flags);
+	list_add_tail (&b->entry, &adapters_list);
+	spin_lock (&b->lock);
+	taupci_enable_interrupt (&b->ddk, 1);
+	spin_unlock (&b->lock);
+	spin_unlock_irqrestore (&taupci_lock_driver, flags);
 
 	taupci_timer5_proc (0);
 	return 0;
 
 ballout:
 	if (b->mem && b->ddk.dead == 0)
-		taupci_halt(&b->ddk);
+		taupci_halt (&b->ddk);
 	if (vbase)
 		iounmap (vbase);
 	if (b->mem) {
@@ -1969,24 +1969,24 @@ static void __exit taupci_remove (struct pci_dev *dev)
 
 	cronyx_led_destroy (&b->led_flasher);
 	spin_lock_irqsave (&taupci_lock_driver, flags);
-	spin_lock(&b->lock);
-	taupci_enable_interrupt(&b->ddk, 0);
-	taupci_handle_interrupt(&b->ddk);
+	spin_lock (&b->lock);
+	taupci_enable_interrupt (&b->ddk, 0);
+	taupci_handle_interrupt (&b->ddk);
 	b->ddk.dead = -1;
-	list_del_init(&b->entry);
-	spin_unlock(&b->lock);
+	list_del_init (&b->entry);
+	spin_unlock (&b->lock);
 	spin_unlock_irqrestore (&taupci_lock_driver, flags);
 
 	if (b->irq_apic)
 		free_irq (b->pdev->irq, b);
-	taupci_halt(&b->ddk);
+	taupci_halt (&b->ddk);
 	pci_disable_device (b->pdev);
 	b->pdev->irq = b->irq_raw;
 
 	iounmap ((void *) b->ddk.base);
 	release_mem_region (b->mem, TAUPCI_BAR1_SIZE);
 	taucpi_freedma (b);
-	pci_set_drvdata(dev, NULL);
+	pci_set_drvdata (dev, NULL);
 	kfree (b);
 }
 
@@ -2015,7 +2015,7 @@ int __init init_module (void)
 
 	init_timer (&taupci_timer);
 #if LINUX_VERSION_CODE < 0x02060A
-	return pci_module_init(&taupci_driver);
+	return pci_module_init (&taupci_driver);
 #else
 	return pci_register_driver (&taupci_driver);
 #endif

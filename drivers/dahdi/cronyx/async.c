@@ -26,7 +26,7 @@
 #include <linux/serial.h>
 
 #if LINUX_VERSION_CODE < 0x020600
-	#include <linux/devfs_fs_kernel.h>
+#	include <linux/devfs_fs_kernel.h>
 #endif
 #include "cserial.h"
 
@@ -35,23 +35,23 @@ MODULE_DESCRIPTION ("Cronyx asyncronous mode layer\n" CRONYX_VERSION_INFO "\n");
 MODULE_LICENSE ("Dual BSD/GPL");
 
 #ifndef SERIAL_TYPE_NORMAL
-	#define SERIAL_TYPE_NORMAL	1
+#	define SERIAL_TYPE_NORMAL	1
 #endif
 
 #ifndef SERIAL_TYPE_CALLOUT
-	#define SERIAL_TYPE_CALLOUT	2
+#	define SERIAL_TYPE_CALLOUT	2
 #endif
 
 #ifndef ASYNC_CALLOUT_ACTIVE
-	#define ASYNC_CALLOUT_ACTIVE 0
+#	define ASYNC_CALLOUT_ACTIVE 0
 #endif
 
 #ifndef TTY_DRIVER_NO_DEVFS
-	#define TTY_DRIVER_NO_DEVFS 0
+#	define TTY_DRIVER_NO_DEVFS 0
 #endif
 
 #ifndef TTY_DRIVER_DYNAMIC_DEV
-	#define TTY_DRIVER_DYNAMIC_DEV 0
+#	define TTY_DRIVER_DYNAMIC_DEV 0
 #endif
 
 typedef struct {
@@ -90,13 +90,13 @@ typedef struct {
 
 
 #if LINUX_VERSION_CODE < 0x020600
-	static struct tty_driver __asy_serial, __asy_callout;
-	#define asy_serial (&__asy_serial)
-	#define asy_callout (&__asy_callout)
-	static struct tty_struct *asy_ttys[CRONYX_MINOR_MAX];
-	static int asy_refcount;
+static struct tty_driver __asy_serial, __asy_callout;
+#define asy_serial (&__asy_serial)
+#define asy_callout (&__asy_callout)
+static struct tty_struct *asy_ttys[CRONYX_MINOR_MAX];
+static int asy_refcount;
 #else
-	static struct tty_driver *asy_serial, *asy_callout;
+static struct tty_driver *asy_serial, *asy_callout;
 #endif
 static cronyx_termios_t *asy_termios[CRONYX_MINOR_MAX];
 #if LINUX_VERSION_CODE < 0x030409
@@ -105,9 +105,9 @@ static cronyx_termios_t *asy_termioslocked[CRONYX_MINOR_MAX];
 static asy_t asy_data[CRONYX_MINOR_MAX];
 
 #if LINUX_VERSION_CODE < 0x020614
-	static void asy_offintr (void *private);
+static void asy_offintr (void *private);
 #else
-	static void asy_offintr (struct work_struct *work);
+static void asy_offintr (struct work_struct *work);
 #endif /* if LINUX_VERSION_CODE < 0x020614 */
 static cronyx_proto_t dispatch_tab;
 
@@ -156,7 +156,7 @@ static void asy_receive (cronyx_binder_item_t * h, struct sk_buff *skb)
 	dev_kfree_skb_any (skb);
 }
 
-static void asy_receive_error(cronyx_binder_item_t * h, int errcode)
+static void asy_receive_error (cronyx_binder_item_t * h, int errcode)
 {
 	asy_t *p = h->sw;
 	struct tty_struct *tty = p->tty;

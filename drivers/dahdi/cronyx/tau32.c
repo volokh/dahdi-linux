@@ -22,15 +22,15 @@
 #include "cserial.h"
 
 #if !defined (__GNUC__) || (__GNUC__ < 3)
-	#error "Cronyx Tau-PCI/32 module required at least GCC 3.0"
+#	error "Cronyx Tau-PCI/32 module required at least GCC 3.0"
 #endif
 
 #ifndef CONFIG_PCI
-	#error "Cronyx Tau-PCI/32 module required PCI-bus support."
+#	error "Cronyx Tau-PCI/32 module required PCI-bus support."
 #endif
 
 #ifndef DMA_32BIT_MASK
-	#define DMA_32BIT_MASK 0x00000000FFFFFFFFull
+#	define DMA_32BIT_MASK 0x00000000FFFFFFFFull
 #endif
 
 /* #define LY_DEEP_DEBUG */

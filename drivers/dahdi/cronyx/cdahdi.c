@@ -14,7 +14,7 @@
  * or modify this software as long as this message is kept with the software,
  * all derivative works or modified versions.
  *
- * $Id: cdahdi.c, v 1.10 2009-09-09 11:54:56 ly Exp $
+ * $Id: cdahdi.c,v 1.10 2009-09-09 11:54:56 ly Exp $
  */
 #include "module.h"
 #include <linux/if_ether.h>
@@ -26,7 +26,7 @@
 
 #include <dahdi/kernel.h>
 #ifndef DAHDI_ECHO_MODE_DEFINED
-	#include "dahdi-echostate-def.h"
+#	include "dahdi-echostate-def.h"
 #endif
 
 /* Module information */
@@ -37,11 +37,11 @@ MODULE_LICENSE ("Dual BSD/GPL");
 int spareparts_mz = 0xff;
 
 #ifdef MODULE_PARM
-	MODULE_PARM (spareparts_mz, "i");
+MODULE_PARM (spareparts_mz, "i");
 #else
-	module_param (spareparts_mz, int, 0644);
+module_param (spareparts_mz, int, 0644);
 #endif
-MODULE_PARM_DESC(spareparts_mz, "Assume that spare bits of CAS multiframe may be zeroed");
+MODULE_PARM_DESC (spareparts_mz, "Assume that spare bits of CAS multiframe may be zeroed");
 
 typedef struct _ec_buf_t {
 	unsigned head, offset, mask;
@@ -82,7 +82,7 @@ typedef struct _dahdi_t {
 	unsigned backlog_report_countdown;
 } dahdi_t;
 
-static unsigned ec_auto_qlen(dahdi_t * p, unsigned qlen)
+static unsigned ec_auto_qlen (dahdi_t * p, unsigned qlen)
 {
 	return qlen * p->io_chunk / p->fb_count + DAHDI_CHUNKSIZE;
 }
@@ -93,9 +93,9 @@ static void ec_free (ec_buf_t * ec)
 
 	for (i = 0; i < 31; i++) {
 		if (ec->buf[i])
-			kfree(ec->buf[i]);
+			kfree (ec->buf[i]);
 	}
-	kfree(ec);
+	kfree (ec);
 }
 
 static void ec_kick (dahdi_t * p)
@@ -140,12 +140,12 @@ static void ec_update (dahdi_t * p, ec_buf_t * ec)
 	if (old_ec) {
 		/* LY-TODO: rcu-like, all running paths with current ec-buffers must be done. */
 		set_current_state (TASK_INTERRUPTIBLE);
-		schedule_timeout(DAHDI_CHUNKSIZE * 5 * HZ / 8000 + 1);
+		schedule_timeout (DAHDI_CHUNKSIZE * 5 * HZ / 8000 + 1);
 		ec_free (old_ec);
 	}
 }
 
-static int ec_offset(dahdi_t * p, int offset)
+static int ec_offset (dahdi_t * p, int offset)
 {
 	int i, buflen;
 	ec_buf_t *ec;
@@ -154,7 +154,7 @@ static int ec_offset(dahdi_t * p, int offset)
 
 	if (offset > 0) {
 		buflen = 16;
-		while(buflen <= offset + DAHDI_CHUNKSIZE * 4) {
+		while (buflen <= offset + DAHDI_CHUNKSIZE * 4) {
 			buflen += buflen;
 			if (buflen > 4096)
 				return -EINVAL;
@@ -171,7 +171,7 @@ static int ec_offset(dahdi_t * p, int offset)
 		return 0;
 	}
 
-	ec = kzalloc(sizeof(ec_buf_t), GFP_KERNEL);
+	ec = kzalloc (sizeof (ec_buf_t), GFP_KERNEL);
 
 	if (!ec)
 		return -ENOMEM;
@@ -183,7 +183,7 @@ static int ec_offset(dahdi_t * p, int offset)
 				ec_free (ec);
 				return -ENOMEM;
 			}
-			memset(ec->buf[i], 0xD5, buflen);
+			memset (ec->buf[i], 0xD5, buflen);
 		}
 	}
 
@@ -193,7 +193,7 @@ static int ec_offset(dahdi_t * p, int offset)
 	return 0;
 }
 
-static unsigned cas_get(dahdi_t * p)
+static unsigned cas_get (dahdi_t * p)
 {
 	unsigned byte = p->cas_s2p.lock ? 11 : 15 /* LY: remote mfas alarm */ ;
 
@@ -203,7 +203,7 @@ static unsigned cas_get(dahdi_t * p)
 	return byte;
 }
 
-static inline int is_valid_mfas(u8 byte)
+static inline int is_valid_mfas (u8 byte)
 {
 	return byte < 16 && (spareparts_mz | byte);
 }
@@ -217,8 +217,8 @@ static void cas_put_abcd (dahdi_t * p, int pos, u8 abcd)
 		if (p->cas_countdown < 3)
 			p->cas_countdown++;
 		if (p->cas_s2p.lock && --p->cas_s2p.lock == 0) {
-			CRONYX_LOG_1(p->chan, "cdahdi: CAS sync-lost\n");
-			cronyx_modem_event(p->chan);
+			CRONYX_LOG_1 (p->chan, "cdahdi: CAS sync-lost\n");
+			cronyx_modem_event (p->chan);
 		}
 	}
 
@@ -228,18 +228,18 @@ static void cas_put_abcd (dahdi_t * p, int pos, u8 abcd)
 		if (n >= 0 && p->cas_countdown == 0) {
 			p->cas_s2p.force &= ~(1ul << pos);
 			if (!(p->chans[n]->sig & DAHDI_SIG_CLEAR)) {
-				CRONYX_LOG_1(p->chan, "cdahdi: CAS abcd-change %X->%X, ts = %d, ch = %d\n", old_abcd,
+				CRONYX_LOG_1 (p->chan, "cdahdi: CAS abcd-change %X->%X, ts = %d, ch = %d\n", old_abcd,
 					abcd, pos, n + 1);
 				if (! abcd || p->cas_s2p.long_lost > 1)
 					abcd = 0xF;
-				dahdi_rbsbits(p->chans[n], abcd);
+				dahdi_rbsbits (p->chans[n], abcd);
 			}
 		}
 		p->cas_s2p.abcd[pos] = abcd;
 	}
 }
 
-static void cas_put(dahdi_t * p, u8 byte)
+static void cas_put (dahdi_t * p, u8 byte)
 {
 	u8 abcd_rebuild[32];
 	int i, lock_target_pos;
@@ -257,9 +257,9 @@ static void cas_put(dahdi_t * p, u8 byte)
 	}
 #endif
 
-	if (likely(p->cas_s2p.lock)) {
+	if (likely (p->cas_s2p.lock)) {
 		if (p->cas_s2p.pos == 0) {
-			if (unlikely(!is_valid_mfas(byte))) {
+			if (unlikely (!is_valid_mfas (byte))) {
 				p->cas_countdown = 3;
 				if (--p->cas_s2p.lock == 1) {
 					/*
@@ -269,34 +269,34 @@ static void cas_put(dahdi_t * p, u8 byte)
 					if ( /*(fas_demux_state & 1) == 0 && */ p->cas_s2p.abcd[15] == 0
 						&& p->cas_s2p.abcd[31] != 0) {
 						lock_target_pos = 1;
-						CRONYX_LOG_1(p->chan, "cdahdi: CAS slip-drop\n");
+						CRONYX_LOG_1 (p->chan, "cdahdi: CAS slip-drop\n");
 						goto cas_lock;
 					}
 				} else {
-					CRONYX_LOG_1(p->chan, "cdahdi: CAS sync-lost\n");
-					cronyx_modem_event(p->chan);
+					CRONYX_LOG_1 (p->chan, "cdahdi: CAS sync-lost\n");
+					cronyx_modem_event (p->chan);
 				}
-			} else if (unlikely(p->cas_s2p.lock != 2)) {
+			} else if (unlikely (p->cas_s2p.lock != 2)) {
 				p->cas_countdown = 3;
 				p->cas_s2p.lock = 2;
 				p->cas_s2p.force = 0xFFFFFFFFul;
-				cronyx_modem_event(p->chan);
+				cronyx_modem_event (p->chan);
 			}
-		} else if (p->cas_s2p.pos == 1 && unlikely(p->cas_s2p.lock == p->cas_s2p.pos)) {
+		} else if (p->cas_s2p.pos == 1 && unlikely (p->cas_s2p.lock == p->cas_s2p.pos)) {
 			/*
 			 * LY: slip fast-recovery logic
 			 * may be repeat-slip case, looking for cas-sync in current cell
 			 */
-			if ( /*(fas_demux_state & 1) == 0 && */ is_valid_mfas(byte)) {
+			if ( /*(fas_demux_state & 1) == 0 && */ is_valid_mfas (byte)) {
 				lock_target_pos = 0;
-				CRONYX_LOG_1(p->chan, "cdahdi: CAS slip-repeat\n");
+				CRONYX_LOG_1 (p->chan, "cdahdi: CAS slip-repeat\n");
 				goto cas_lock;
 			}
 		}
-	} else if (is_valid_mfas(byte) /*&& (fas_demux_state & 1) == 0 */ ) {
+	} else if (is_valid_mfas (byte) /*&& (fas_demux_state & 1) == 0 */ ) {
 		if ((p->cas_s2p.abcd[p->cas_s2p.pos] | p->cas_s2p.abcd[p->cas_s2p.pos + 16]) & 15) {
 			lock_target_pos = 0;
-			CRONYX_LOG_1(p->chan, "cdahdi: CAS sync-lock\n");
+			CRONYX_LOG_1 (p->chan, "cdahdi: CAS sync-lock\n");
 			if (p->cas_s2p.pos != lock_target_pos) {
 cas_lock:
 				i = 0;
@@ -306,14 +306,14 @@ cas_lock:
 
 					abcd_rebuild[to] = p->cas_s2p.abcd[from];
 					abcd_rebuild[to + 16] = p->cas_s2p.abcd[from + 16];
-				} while(++i < 16);
-				memcpy(p->cas_s2p.abcd, abcd_rebuild, 32);
+				} while (++i < 16);
+				memcpy (p->cas_s2p.abcd, abcd_rebuild, 32);
 				p->cas_s2p.pos = lock_target_pos;
 			}
 			p->cas_s2p.lock = 2;
 			p->cas_s2p.force = 0xFFFFFFFFul;
 			p->cas_countdown = 3;
-			cronyx_modem_event(p->chan);
+			cronyx_modem_event (p->chan);
 		}
 	} else if (byte != 0) {
 		/*
@@ -336,7 +336,7 @@ static void cdahdi_error (cronyx_binder_item_t *h, int errcode)
 
 	if (p->start_countdown == 0) {
 		p->span.parent->irqmisses++;
-		CRONYX_LOG_1(h, "cdahdi: rx/tx error %x\n", errcode);
+		CRONYX_LOG_1 (h, "cdahdi: rx/tx error %x\n", errcode);
 		if (p->error < errcode && (errcode == CRONYX_ERR_OVERFLOW
 					|| errcode == CRONYX_ERR_OVERRUN || errcode == CRONYX_ERR_UNDERRUN))
 			p->error = errcode;
@@ -361,13 +361,13 @@ static void cdahdi_put_received (dahdi_t * p, struct sk_buff *skb)
 	i = fb = 0;
 	do {
 		if (fb == p->cas_fb)
-			cas_put(p, skb->data[i]);
+			cas_put (p, skb->data[i]);
 		else if (p->map_fb2chan[fb] >= 0)
 			p->chans[p->map_fb2chan[fb]]->readchunk[p->s2p_pos] = skb->data[i];
 		if (++fb == p->fb_count) {
 			fb = 0;
 			if (p->recovery_countdown > 0 && --p->recovery_countdown == 0)
-				cronyx_modem_event(p->chan);
+				cronyx_modem_event (p->chan);
 
 			if (++p->s2p_pos == DAHDI_CHUNKSIZE) {
 				p->s2p_pos = 0;
@@ -386,25 +386,25 @@ static void cdahdi_put_received (dahdi_t * p, struct sk_buff *skb)
 
 								ec_buf = p->ec->buf[n] + tail;
 								if (gap < DAHDI_CHUNKSIZE) {
-									memcpy(ec_buf_local, ec_buf, gap);
-									memcpy(ec_buf_local + gap, p->ec->buf[n],
+									memcpy (ec_buf_local, ec_buf, gap);
+									memcpy (ec_buf_local + gap, p->ec->buf[n],
 										DAHDI_CHUNKSIZE - gap);
 									ec_buf = ec_buf_local;
 								}
 							}
 							dahdi_ec_chunk (chan, chan->readchunk, ec_buf);
 						}
-					} while(++n < p->span.channels);
+					} while (++n < p->span.channels);
 					dahdi_receive (&p->span);
 				}
 			}
 		}
-	} while(++i < skb->len);
+	} while (++i < skb->len);
 
-	dev_kfree_skb_any(skb);
+	dev_kfree_skb_any (skb);
 }
 
-static void cdahdi_transmit(cronyx_binder_item_t *h)
+static void cdahdi_transmit (cronyx_binder_item_t *h)
 {
 	unsigned long flags;
 	int i, fb;
@@ -416,7 +416,7 @@ static void cdahdi_transmit(cronyx_binder_item_t *h)
 		u8 byte = 0xFF;
 
 		if (fb == p->cas_fb)
-			byte = cas_get(p);
+			byte = cas_get (p);
 		else if (p->map_fb2chan[fb] >= 0)
 			byte = p->chans[p->map_fb2chan[fb]]->writechunk[p->p2s_pos];
 		p->tx[i] = byte;
@@ -426,7 +426,7 @@ static void cdahdi_transmit(cronyx_binder_item_t *h)
 				p->p2s_pos = 0;
 				if (p->span.maintstat != DAHDI_MAINT_LOCALLOOP &&
 				(p->span.flags & DAHDI_FLAG_RUNNING)) {
-					dahdi_transmit(&p->span);
+					dahdi_transmit (&p->span);
 					if (p->ec) {
 						unsigned n = 0, gap = p->ec->mask + 1 - p->ec->head;
 
@@ -436,23 +436,23 @@ static void cdahdi_transmit(cronyx_binder_item_t *h)
 							struct dahdi_chan *chan = p->chans[n];
 
 							if (chan->chanpos != 16 && chan->ec_current) {
-								memcpy(p->ec->buf[n] + p->ec->head, chan->writechunk, gap);
+								memcpy (p->ec->buf[n] + p->ec->head, chan->writechunk, gap);
 								if (gap < DAHDI_CHUNKSIZE)
-									memcpy(p->ec->buf[n], chan->writechunk + gap, DAHDI_CHUNKSIZE - gap);
+									memcpy (p->ec->buf[n], chan->writechunk + gap, DAHDI_CHUNKSIZE - gap);
 							}
-						} while(++n < p->span.channels);
+						} while (++n < p->span.channels);
 						p->ec->head = (p->ec->head + DAHDI_CHUNKSIZE) & p->ec->mask;
 					}
 				}
 			}
 		}
-	} while(++i < p->io_chunk);
+	} while (++i < p->io_chunk);
 	spin_unlock_irqrestore (&p->span.lock, flags);
 
-	if (h->dispatch.transmit(h, p->skb) <= 0 && p->start_countdown == 0)
+	if (h->dispatch.transmit (h, p->skb) <= 0 && p->start_countdown == 0)
 		p->span.parent->irqmisses++;
 
-	if (likely(p->backlog_head != p->backlog_tail)) {
+	if (likely (p->backlog_head != p->backlog_tail)) {
 		cdahdi_put_received (p, p->backlog_rx[p->backlog_tail]);
 		p->backlog_tail = (p->backlog_tail + 1) & (RX_BACKLOG_SIZE - 1);
 	} else if (p->start_countdown == 0) {
@@ -463,7 +463,7 @@ static void cdahdi_transmit(cronyx_binder_item_t *h)
 		p->span.parent->irqmisses++;
 	}
 
-	if (unlikely(p->start_countdown > 0)) {
+	if (unlikely (p->start_countdown > 0)) {
 		if (--p->start_countdown == 0)
 			ec_kick (p);
 	} else if (--p->io_count == 0) {
@@ -475,14 +475,14 @@ static void cdahdi_transmit(cronyx_binder_item_t *h)
 				if (p->cas_s2p.long_lost < 2)
 					p->cas_s2p.long_lost++;
 				if (p->cas_s2p.long_lost == 2)
-					memset(p->cas_s2p.abcd, -1, sizeof(p->cas_s2p.abcd));
+					memset (p->cas_s2p.abcd, -1, sizeof (p->cas_s2p.abcd));
 			} else {
 				if (p->cas_s2p.long_lost)
 					--p->cas_s2p.long_lost;
 			}
 		}
 		p->io_count = p->io_count_chunk;
-		cronyx_modem_event(p->chan);
+		cronyx_modem_event (p->chan);
 	}
 }
 
@@ -493,34 +493,34 @@ static void cdahdi_receive (cronyx_binder_item_t *h, struct sk_buff *skb)
 	if (skb->len != p->io_chunk && skb->len % p->fb_count != 0) {
 		if (p->start_countdown == 0)
 			printk (KERN_ERR "cdahdi: invalid rx-data length (%d)\n", skb->len);
-		dev_kfree_skb_any(skb);
+		dev_kfree_skb_any (skb);
 		return;
 	}
 
 	p->backlog_rx[p->backlog_head] = skb;
 	p->backlog_head = (p->backlog_head + 1) & (RX_BACKLOG_SIZE - 1);
 
-	if (unlikely(p->backlog_head == p->backlog_tail)) {
+	if (unlikely (p->backlog_head == p->backlog_tail)) {
 		printk (KERN_NOTICE "cdahdi: rx-backlog overflow on span %s\n", h->name);
-		dev_kfree_skb_any(p->backlog_rx[p->backlog_tail]);
+		dev_kfree_skb_any (p->backlog_rx[p->backlog_tail]);
 		p->backlog_tail = (p->backlog_tail + 1) & (RX_BACKLOG_SIZE - 1);
 	}
 }
 
 /*-----------------------------------------------------------------------------*/
 
-static void cdahdi_link_down(dahdi_t * p)
+static void cdahdi_link_down (dahdi_t * p)
 {
-	p->chan->dispatch.link_down(p->chan);
-	while(p->backlog_tail != p->backlog_head) {
-		dev_kfree_skb_any(p->backlog_rx[p->backlog_tail]);
+	p->chan->dispatch.link_down (p->chan);
+	while (p->backlog_tail != p->backlog_head) {
+		dev_kfree_skb_any (p->backlog_rx[p->backlog_tail]);
 		p->backlog_tail = (p->backlog_tail + 1) & (RX_BACKLOG_SIZE - 1);
 	}
-	memset(&p->cas_s2p, 0, sizeof(p->cas_s2p));
+	memset (&p->cas_s2p, 0, sizeof (p->cas_s2p));
 	p->recovery_countdown = 256;
 }
 
-static int cdahdi_link_up(dahdi_t * p)
+static int cdahdi_link_up (dahdi_t * p)
 {
 	long value;
 	int i, error;
@@ -528,61 +528,61 @@ static int cdahdi_link_up(dahdi_t * p)
 
 	p->backlog_tail = p->backlog_head = 0;
 
-	if (cronyx_param_get(p->chan, cronyx_qlen, &value) >= 0 && value < 2)
-		cronyx_param_set(p->chan, cronyx_qlen, 2);
-	error = p->chan->dispatch.link_up(p->chan);
+	if (cronyx_param_get (p->chan, cronyx_qlen, &value) >= 0 && value < 2)
+		cronyx_param_set (p->chan, cronyx_qlen, 2);
+	error = p->chan->dispatch.link_up (p->chan);
 
 	if (error < 0)
-		CRONYX_LOG_1(p->chan, "cdahdi: link-up failed %d\n", error);
+		CRONYX_LOG_1 (p->chan, "cdahdi: link-up failed %d\n", error);
 	else {
-		if (cronyx_param_get(p->chan, cronyx_qlen, &value) < 0)
+		if (cronyx_param_get (p->chan, cronyx_qlen, &value) < 0)
 			value = 2;
 		p->start_countdown = value << 2;
 		for (i = 0; i < value; i++)
-			if (p->chan->dispatch.transmit(p->chan, p->skb) < 0)
+			if (p->chan->dispatch.transmit (p->chan, p->skb) < 0)
 				break;
-		CRONYX_LOG_1(p->chan, "cdahdi: link-up auto tx-qlen %d\n", i);
+		CRONYX_LOG_1 (p->chan, "cdahdi: link-up auto tx-qlen %d\n", i);
 
-		memset(&p->cas_s2p, 0, sizeof(p->cas_s2p));
+		memset (&p->cas_s2p, 0, sizeof (p->cas_s2p));
 		p->recovery_countdown = 256;
 
 		if (p->start_countdown < 64)
 			p->start_countdown = 64;
 		p->span.alarms = 0;
-		cronyx_modem_event(p->chan);
+		cronyx_modem_event (p->chan);
 
-		delay_samples = ec_auto_qlen(p, i);
+		delay_samples = ec_auto_qlen (p, i);
 		if (p->ec == NULL || p->ec->offset + DAHDI_CHUNKSIZE < delay_samples / 2) {
-			if (ec_offset(p, delay_samples) < 0)
-				CRONYX_LOG_1(p->chan, "cdahdi: link-up update ec-delay failed\n");
+			if (ec_offset (p, delay_samples) < 0)
+				CRONYX_LOG_1 (p->chan, "cdahdi: link-up update ec-delay failed\n");
 			else
-				CRONYX_LOG_1(p->chan, "cdahdi: link-up auto ec-delay %d samples\n", p->ec->offset);
+				CRONYX_LOG_1 (p->chan, "cdahdi: link-up auto ec-delay %d samples\n", p->ec->offset);
 		}
 	}
 	return error;
 }
 
-static int cdahdi_open(struct dahdi_chan *chan)
+static int cdahdi_open (struct dahdi_chan *chan)
 {
-	dahdi_t *p = container_of(chan->span, dahdi_t, span);
+	dahdi_t *p = container_of (chan->span, dahdi_t, span);
 
-	CRONYX_LOG_1(p->chan, "cdahdi: open(ts %d)\n", chan->chanpos);
-	set_bit(chan->chanpos, &p->usemask);
+	CRONYX_LOG_1 (p->chan, "cdahdi: open (ts %d)\n", chan->chanpos);
+	set_bit (chan->chanpos, &p->usemask);
 	return 0;
 }
 
-static int cdahdi_close(struct dahdi_chan *chan)
+static int cdahdi_close (struct dahdi_chan *chan)
 {
-	dahdi_t *p = container_of(chan->span, dahdi_t, span);
+	dahdi_t *p = container_of (chan->span, dahdi_t, span);
 
-	CRONYX_LOG_1(p->chan, "cdahdi: close (ts %d)\n", chan->chanpos);
-	clear_bit(chan->chanpos, &p->usemask);
+	CRONYX_LOG_1 (p->chan, "cdahdi: close (ts %d)\n", chan->chanpos);
+	clear_bit (chan->chanpos, &p->usemask);
 	return 0;
 }
 
-static int cdahdi_rbsbits(struct dahdi_chan *chan, int bits)
+static int cdahdi_rbsbits (struct dahdi_chan *chan, int bits)
 {
-	dahdi_t *p = container_of(chan->span, dahdi_t, span);
+	dahdi_t *p = container_of (chan->span, dahdi_t, span);
 
 	if (p->cas_fb < 0)
 		return -EINVAL;
@@ -599,97 +599,97 @@ static int cdahdi_rbsbits(struct dahdi_chan *chan, int bits)
 	return -EINVAL;
 }
 
-static int cdahdi_startup(struct file *file, struct dahdi_span *dspan)
+static int cdahdi_startup (struct file *file, struct dahdi_span *dspan)
 {
-	dahdi_t *p = container_of(dspan, dahdi_t, span);
+	dahdi_t *p = container_of (dspan, dahdi_t, span);
 
-	CRONYX_LOG_1(p->chan, "cdahdi: startup, flags is 0x%lx\n", dspan->flags);
-	might_sleep();
+	CRONYX_LOG_1 (p->chan, "cdahdi: startup, flags is 0x%lx\n", dspan->flags);
+	might_sleep ();
 
 	if (!p->chan->running)
-		return cdahdi_link_up(p);
+		return cdahdi_link_up (p);
 
 	return 0;
 }
 
-static int cdahdi_shutdown(struct dahdi_span *dspan)
+static int cdahdi_shutdown (struct dahdi_span *dspan)
 {
-	dahdi_t *p = container_of(dspan, dahdi_t, span);
+	dahdi_t *p = container_of (dspan, dahdi_t, span);
 
-	CRONYX_LOG_1(p->chan, "cdahdi: shutdown\n");
-	might_sleep();
+	CRONYX_LOG_1 (p->chan, "cdahdi: shutdown\n");
+	might_sleep ();
 
 	if (p->chan->running)
-		cdahdi_link_down(p);
+		cdahdi_link_down (p);
 
 	return 0;
 }
 
-static int cdahdi_maint(struct dahdi_span *dspan, int cmd)
+static int cdahdi_maint (struct dahdi_span *dspan, int cmd)
 {
-	dahdi_t *p = container_of(dspan, dahdi_t, span);
+	dahdi_t *p = container_of (dspan, dahdi_t, span);
 
-	might_sleep();
+	might_sleep ();
 
-	switch(cmd) {
+	switch (cmd) {
 	case DAHDI_MAINT_NONE:
-		return cronyx_param_set(p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
+		return cronyx_param_set (p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
 			CRONYX_LOOP_NONE);
 	case DAHDI_MAINT_LOCALLOOP:
-		return cronyx_param_set(p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
+		return cronyx_param_set (p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
 			CRONYX_LOOP_LINEMIRROR);
 	case DAHDI_MAINT_REMOTELOOP:
-		return cronyx_param_set(p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
+		return cronyx_param_set (p->chan, cronyx_loop_mode | cronyx_flag_channel2link,
 			CRONYX_LOOP_REMOTE);
 	case DAHDI_MAINT_LOOPUP:
 	case DAHDI_MAINT_LOOPDOWN:
 	//!		case DAHDI_MAINT_LOOPSTOP:
 		return -ENOSYS;
 	default:
-		CRONYX_LOG_2(p->chan, "cdahdi: unknown maint command: %d\n", cmd);
+		CRONYX_LOG_2 (p->chan, "cdahdi: unknown maint command: %d\n", cmd);
 		return -EINVAL;
 	}
 }
 
-static int cdahdi_spanconfig(struct file *file, struct dahdi_span *dspan, struct dahdi_lineconfig *lc)
+static int cdahdi_spanconfig (struct file *file, struct dahdi_span *dspan, struct dahdi_lineconfig *lc)
 {
-	dahdi_t *p = container_of(dspan, dahdi_t, span);
+	dahdi_t *p = container_of (dspan, dahdi_t, span);
 	long value;
 	int error;
 
-	if (cronyx_param_get(p->chan, cronyx_cas_mode | cronyx_flag_channel2link, &value) < 0)
+	if (cronyx_param_get (p->chan, cronyx_cas_mode | cronyx_flag_channel2link, &value) < 0)
 		value = CRONYX_CASMODE_OFF;
 
 	if (lc->lineconfig & DAHDI_CONFIG_CCS) {
 		if (value > CRONYX_CASMODE_OFF || p->cas_fb >= 0 || p->ts16_fb < 0) {
-			CRONYX_LOG_1(p->chan,
+			CRONYX_LOG_1 (p->chan,
 				"cdahdi: hardware channel CAS-mode is not compatible with span config\n");
 			return -EIO;
 		}
 	}
 
-	switch(lc->lineconfig & (DAHDI_CONFIG_D4 | DAHDI_CONFIG_ESF | DAHDI_CONFIG_AMI | DAHDI_CONFIG_B8ZS | DAHDI_CONFIG_HDB3)) {
+	switch (lc->lineconfig & (DAHDI_CONFIG_D4 | DAHDI_CONFIG_ESF | DAHDI_CONFIG_AMI | DAHDI_CONFIG_B8ZS | DAHDI_CONFIG_HDB3)) {
 	default:
 		error = -EINVAL;
 		break;
 	case DAHDI_CONFIG_HDB3:
-		error = cronyx_param_set(p->chan, cronyx_line_code | cronyx_flag_channel2link, CRONYX_HDB3);
+		error = cronyx_param_set (p->chan, cronyx_line_code | cronyx_flag_channel2link, CRONYX_HDB3);
 		break;
 	case DAHDI_CONFIG_AMI:
-		error = cronyx_param_set(p->chan, cronyx_line_code | cronyx_flag_channel2link, CRONYX_AMI);
+		error = cronyx_param_set (p->chan, cronyx_line_code | cronyx_flag_channel2link, CRONYX_AMI);
 		break;
 	}
 
 	if (error < 0) {
-		CRONYX_LOG_1(p->chan, "cdahdi: unsupported line\n");
+		CRONYX_LOG_1 (p->chan, "cdahdi: unsupported line\n");
 		return error;
 	}
 
-	error = cronyx_param_set(p->chan, cronyx_crc4 | cronyx_flag_channel2link,
+	error = cronyx_param_set (p->chan, cronyx_crc4 | cronyx_flag_channel2link,
 		(lc->lineconfig & DAHDI_CONFIG_CRC4) != 0);
 
 	if (error < 0) {
-		CRONYX_LOG_1(p->chan, "cdahdi: unable set crc4-mode\n");
+		CRONYX_LOG_1 (p->chan, "cdahdi: unable set crc4-mode\n");
 		return error;
 	}
 
@@ -700,21 +700,21 @@ static int cdahdi_spanconfig(struct file *file, struct dahdi_span *dspan, struct
 	return 0;
 }
 
-static int cdahdi_dacs(struct dahdi_chan *chan1, struct dahdi_chan *chan2)
+static int cdahdi_dacs (struct dahdi_chan *chan1, struct dahdi_chan *chan2)
 {
 	dahdi_t *p1 = chan1->pvt;
 	cronyx_binder_item_t *h1 = p1->chan;
 
 	if (h1->dispatch.phony_dacs) {
 		if (NULL == chan2) {
-			h1->dispatch.phony_dacs(h1, chan1->chanpos, NULL, -1);
+			h1->dispatch.phony_dacs (h1, chan1->chanpos, NULL, -1);
 			return 0;
 		} else {
 			dahdi_t *p2 = chan2->pvt;
 			cronyx_binder_item_t *h2 = p2->chan;
 
 			if (h1->dispatch.phony_dacs == h2->dispatch.phony_dacs)
-				return h1->dispatch.phony_dacs(h1, chan1->chanpos, h2, chan2->chanpos);
+				return h1->dispatch.phony_dacs (h1, chan1->chanpos, h2, chan2->chanpos);
 		}
 	}
 	return -EINVAL;
@@ -733,7 +733,7 @@ static struct dahdi_span_ops binder_span_ops =
 	, .rbsbits = cdahdi_rbsbits
 };
 
-static void InitSpanE1(struct dahdi_span *span)
+static void InitSpanE1 (struct dahdi_span *span)
 {
 	span->spantype = SPANTYPE_DIGITAL_E1;
 	span->channels = 31;
@@ -741,7 +741,7 @@ static void InitSpanE1(struct dahdi_span *span)
 	span->linecompat = DAHDI_CONFIG_HDB3 | DAHDI_CONFIG_AMI | DAHDI_CONFIG_CRC4 | DAHDI_CONFIG_NOTOPEN/* | DAHDI_CONFIG_CCS*/;
 }
 
-static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
+static int cdahdi_init_span (cronyx_binder_item_t *h, struct dahdi_device *ddev)
 {
 	dahdi_t *p;
 	int i, j;
@@ -749,36 +749,36 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	long value;
 	const char *desc;
 
-	if (cronyx_param_set(h, cronyx_channel_mode, CRONYX_MODE_VOICE) < 0) {
-		CRONYX_LOG_1(h, "cdahdi: unable set channel voice-mode\n");
+	if (cronyx_param_set (h, cronyx_channel_mode, CRONYX_MODE_VOICE) < 0) {
+		CRONYX_LOG_1 (h, "cdahdi: unable set channel voice-mode\n");
 		return -EIO;
 	}
 
 	if (h->dispatch.phony_get_e1ts_map) {
-		if (h->dispatch.phony_get_e1ts_map(h, &e1ts_map) < 0) {
-			CRONYX_LOG_1(h, "cdahdi: unable get ts-map\n");
+		if (h->dispatch.phony_get_e1ts_map (h, &e1ts_map) < 0) {
+			CRONYX_LOG_1 (h, "cdahdi: unable get ts-map\n");
 			return -EIO;
 		}
 		if (h->debug > 1) {
-			CRONYX_LOG_2(h, "cdahdi: e1ts_map =");
+			CRONYX_LOG_2 (h, "cdahdi: e1ts_map =");
 			for (i = 0; i < e1ts_map.length; i++)
 				printk (" %d", e1ts_map.ts_index[i]);
 			printk ("\n");
 		}
 		if (e1ts_map.length < 1 || e1ts_map.length > 32) {
-			CRONYX_LOG_1(h, "cdahdi: invalid ts-map\n");
+			CRONYX_LOG_1 (h, "cdahdi: invalid ts-map\n");
 			return -EIO;
 		}
 		for (i = 0; i < e1ts_map.length; i++) {
 			if (e1ts_map.ts_index[i] < 0)
 				continue;
 			if (e1ts_map.ts_index[i] >= 32) {
-				CRONYX_LOG_1(h, "cdahdi: invalid ts-map\n");
+				CRONYX_LOG_1 (h, "cdahdi: invalid ts-map\n");
 				return -EIO;
 			}
 			for (j = 0; j < i; j++) {
 				if (e1ts_map.ts_index[i] == e1ts_map.ts_index[j]) {
-					CRONYX_LOG_1(h, "cdahdi: invalid ts-map\n");
+					CRONYX_LOG_1 (h, "cdahdi: invalid ts-map\n");
 					return -EIO;
 				}
 			}
@@ -786,13 +786,13 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	} else {
 		unsigned long timeslots;
 
-		if (cronyx_param_get(h, cronyx_timeslots_use, &timeslots) < 0) {
-			CRONYX_LOG_1(h, "cdahdi: unable get ts-set\n");
+		if (cronyx_param_get (h, cronyx_timeslots_use, &timeslots) < 0) {
+			CRONYX_LOG_1 (h, "cdahdi: unable get ts-set\n");
 			return -EIO;
 		}
-		CRONYX_LOG_1(h, "cdahdi: timeslots = 0x%lX\n", timeslots);
+		CRONYX_LOG_1 (h, "cdahdi: timeslots = 0x%lX\n", timeslots);
 		if ((timeslots & 0xFFFEFFFEul) == 0 || timeslots > 0xFFFFFFFFul) {
-			CRONYX_LOG_1(h, "cdahdi: invalid ts-set\n");
+			CRONYX_LOG_1 (h, "cdahdi: invalid ts-set\n");
 			return -EIO;
 		}
 		i = e1ts_map.length = 0;
@@ -802,17 +802,17 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 				e1ts_map.length++;
 			}
 			i++;
-		} while(timeslots >>= 1);
+		} while (timeslots >>= 1);
 	}
 
-	p = kzalloc(sizeof(dahdi_t), GFP_KERNEL);
+	p = kzalloc (sizeof (dahdi_t), GFP_KERNEL);
 
 	if (NULL == p)
 		return -ENOMEM;
 
-	memset(&p->cas_p2s, 15, sizeof(p->cas_p2s));
-	memset(p->map_ts2chan, -1, sizeof(p->map_ts2chan));
-	memset(p->map_fb2chan, -1, sizeof(p->map_fb2chan));
+	memset (&p->cas_p2s, 15, sizeof (p->cas_p2s));
+	memset (p->map_ts2chan, -1, sizeof (p->map_ts2chan));
+	memset (p->map_fb2chan, -1, sizeof (p->map_fb2chan));
 	p->start_countdown = -1;
 	p->cas_countdown = -1;
 	p->recovery_countdown = -1;
@@ -828,9 +828,9 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	p->cas_fb = -1;
 	value = CRONYX_CASMODE_OFF;
 
-	if (cronyx_param_get(h, cronyx_cas_mode | cronyx_flag_channel2link, &value) >= 0 && value > CRONYX_CASMODE_OFF)
+	if (cronyx_param_get (h, cronyx_cas_mode | cronyx_flag_channel2link, &value) >= 0 && value > CRONYX_CASMODE_OFF)
 		p->cas_fb = p->ts16_fb;
-	CRONYX_LOG_2(h, "cdahdi: cas-mode = %ld\n", value);
+	CRONYX_LOG_2 (h, "cdahdi: cas-mode = %ld\n", value);
 
 	p->fb_count = e1ts_map.length;
 
@@ -844,7 +844,7 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 		p->chans[p->span.channels] = chan;
 		if (i == p->ts16_fb) {
 			chan->sigcap = DAHDI_SIG_HDLCFCS | DAHDI_SIG_CLEAR;
-			snprintf(chan->name, sizeof(chan->name), "%s/CCS", h->name);
+			snprintf (chan->name, sizeof (chan->name), "%s/CCS", h->name);
 		} else {
 			chan->sigcap = DAHDI_SIG_SF | DAHDI_SIG_CLEAR /* | DAHDI_SIG_DACS */;
 			if (p->cas_fb >= 0)
@@ -852,7 +852,7 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 			| DAHDI_SIG_EM_E1 | DAHDI_SIG_EM
 			| DAHDI_SIG_FXSLS | DAHDI_SIG_FXSGS | DAHDI_SIG_FXSKS
 			| DAHDI_SIG_FXOLS | DAHDI_SIG_FXOGS | DAHDI_SIG_FXOKS;
-			snprintf(chan->name, sizeof(chan->name), "%s/%d", h->name, n);
+			snprintf (chan->name, sizeof (chan->name), "%s/%d", h->name, n);
 		}
 
 		chan->pvt = p;
@@ -864,16 +864,16 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 
 	/* LY: select appropriate io-chunk size. */
 	p->io_chunk = DAHDI_CHUNKSIZE * p->fb_count;
-	while(p->io_chunk > 512 && (p->io_chunk & 1) == 0 && ((p->io_chunk >> 1) % p->fb_count) == 0)
+	while (p->io_chunk > 512 && (p->io_chunk & 1) == 0 && ((p->io_chunk >> 1) % p->fb_count) == 0)
 		p->io_chunk >>= 1;
-	while(cronyx_param_set(h, cronyx_mtu, p->io_chunk) < 0) {
+	while (cronyx_param_set (h, cronyx_mtu, p->io_chunk) < 0) {
 		if (p->io_chunk < DAHDI_CHUNKSIZE * p->fb_count)
 			p->io_chunk <<= 1;
 		else
 			p->io_chunk += DAHDI_CHUNKSIZE * p->fb_count;
 		if (p->io_chunk > 1024) {
-			kfree(p);
-			CRONYX_LOG_1(h, "cdahdi: unable set appropriate mtu/io-chunk (%d*n)\n",
+			kfree (p);
+			CRONYX_LOG_1 (h, "cdahdi: unable set appropriate mtu/io-chunk (%d*n)\n",
 				DAHDI_CHUNKSIZE * p->fb_count);
 			return -EIO;
 		}
@@ -887,53 +887,53 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	p->io_count_chunk = 8000 / 8 * p->fb_count / p->io_chunk;
 	p->io_count = p->io_count_chunk;
 
-	CRONYX_LOG_2(h, "cdahdi: ts16_fb = %d, cas_fb = %d\n", p->ts16_fb, p->cas_fb);
-	CRONYX_LOG_2(h, "cdahdi: fb_count = %d, io_chunk = %d, io_count_chunk = %d\n", p->fb_count, p->io_chunk,
+	CRONYX_LOG_2 (h, "cdahdi: ts16_fb = %d, cas_fb = %d\n", p->ts16_fb, p->cas_fb);
+	CRONYX_LOG_2 (h, "cdahdi: fb_count = %d, io_chunk = %d, io_count_chunk = %d\n", p->fb_count, p->io_chunk,
 		p->io_count_chunk);
-	CRONYX_LOG_2(h, "cdahdi: span.channels = %d\n", p->span.channels);
+	CRONYX_LOG_2 (h, "cdahdi: span.channels = %d\n", p->span.channels);
 
 	if (h->debug > 1) {
-		CRONYX_LOG_2(h, "cdahdi: map_ts2chan =");
+		CRONYX_LOG_2 (h, "cdahdi: map_ts2chan =");
 		for (i = 0; i < 32; i++)
 			printk (" %d", p->map_ts2chan[i]);
 		printk ("\n");
-		CRONYX_LOG_2(h, "cdahdi: map_fb2chan =");
+		CRONYX_LOG_2 (h, "cdahdi: map_fb2chan =");
 		for (i = 0; i < p->fb_count; i++)
 			printk (" %d", p->map_fb2chan[i]);
 		printk ("\n");
 	}
 
-	p->skb = dev_alloc_skb(p->io_chunk);
-	CRONYX_LOG_2(h, "cdahdi: Alloc skb");
+	p->skb = dev_alloc_skb (p->io_chunk);
+	CRONYX_LOG_2 (h, "cdahdi: Alloc skb");
 	if (!p->skb) {
-		kfree(p);
+		kfree (p);
 		return -ENOMEM;
 	}
 
-	skb_put(p->skb, p->io_chunk);
+	skb_put (p->skb, p->io_chunk);
 	p->tx = p->skb->data;
-	memset(p->tx, 0xFF, p->skb->len);
+	memset (p->tx, 0xFF, p->skb->len);
 
-	strncpy(p->span.name, h->alias[0] ? h->alias : h->name, sizeof(p->span.name) - 1);
+	strncpy (p->span.name, h->alias[0] ? h->alias : h->name, sizeof (p->span.name) - 1);
 	desc = h->name;
 
-	if (strncmp(h->alias, "ce", 2) == 0)
+	if (strncmp (h->alias, "ce", 2) == 0)
 		desc = "Tau-PCI/32";
-	else if (strncmp(h->alias, "cp", 2) == 0)
+	else if (strncmp (h->alias, "cp", 2) == 0)
 		desc = "Tau-PCI/xE1";
 
-	CRONYX_LOG_2(h, "cdahdi: Find dev:%s",desc);
+	CRONYX_LOG_2 (h, "cdahdi: Find dev:%s",desc);
 
-	snprintf(p->span.desc, sizeof(p->span.desc) - 1, "%s: Cronyx %s ch# %d", h->name, desc, h->order);
+	snprintf (p->span.desc, sizeof (p->span.desc) - 1, "%s: Cronyx %s ch# %d", h->name, desc, h->order);
 
-	CRONYX_LOG_2(h, "cdahdi: Create Dahdi span ");
+	CRONYX_LOG_2 (h, "cdahdi: Create Dahdi span ");
 	h->sw = p;
 	p->chan = h;
 	p->span.ops = &binder_span_ops;
 
 /*!	if (h->dispatch.phony_dacs)
 		p->span.dacs = cdahdi_dacs; */
-	InitSpanE1(&p->span);
+	InitSpanE1 (&p->span);
 	p->span.chans = p->chans;
 	p->span.lineconfig = DAHDI_CONFIG_NOTOPEN;
 
@@ -949,29 +949,29 @@ static int cdahdi_init_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	p->span.owner = THIS_MODULE;
 #endif
 
-	dahdi_init_span(&p->span);
+	dahdi_init_span (&p->span);
 
 	return 0;
 }
 
-void cdahdi_uninit_span(cronyx_binder_item_t *h)
+void cdahdi_uninit_span (cronyx_binder_item_t *h)
 {
 	dahdi_t *p = h->sw;
 
 	if (p) {
-	/* LY-TODO: might be race with span->open(). */
+	/* LY-TODO: might be race with span->open (). */
 
 //!if ((p->span.flags & DAHDI_FLAG_REGISTERED) && dahdi_unregister (&p->span) < 0) {
-//dahdi_unregister_device(p->span.span_device);
-/*	if ((p->span.flags & DAHDI_FLAG_REGISTERED) && dahdi_unassign_span(p->span) < 0) {
-		CRONYX_LOG_1(h, "cdahdi: unable detach, reject from dahdi_unregister()\n");
+//dahdi_unregister_device (p->span.span_device);
+/*	if ((p->span.flags & DAHDI_FLAG_REGISTERED) && dahdi_unassign_span (p->span) < 0) {
+		CRONYX_LOG_1 (h, "cdahdi: unable detach, reject from dahdi_unregister ()\n");
 		return -EBUSY;
 	}*/
 
 #if 0
 		/* LY: seems it is a bug in dahdi.c, our usemask may be != 0. */
 		if (p->usemask) {
-			CRONYX_LOG_1(h, "cdahdi: unable detach, span is used\n");
+			CRONYX_LOG_1 (h, "cdahdi: unable detach, span is used\n");
 			return -EBUSY;
 		}
 #endif
@@ -979,43 +979,43 @@ void cdahdi_uninit_span(cronyx_binder_item_t *h)
 		p->span.flags &= ~DAHDI_FLAG_RUNNING;
 
 		h->sw = 0;
-		cdahdi_link_down(p);
+		cdahdi_link_down (p);
 		if (p->skb)
 			kfree_skb (p->skb);
 
 		if (p->ec)
 			ec_free (p->ec);
-		kfree(p);
+		kfree (p);
 #if LINUX_VERSION_CODE < 0x020600
 		MOD_DEC_USE_COUNT;
 #else
-		module_put(THIS_MODULE);
+		module_put (THIS_MODULE);
 #endif
 	}
 }
 
-int crdahdi_init_device(struct dahdi_device *ddev)
+int crdahdi_init_device (struct dahdi_device *ddev)
 {
 	/*!
-	strncpy(p->span.parent->devicetype, desc, sizeof(p->span.parent->devicetype));
-	strncpy(p->span.parent->location, "TODO: location", sizeof(p->span.parent->location));*/
+	strncpy (p->span.parent->devicetype, desc, sizeof (p->span.parent->devicetype));
+	strncpy (p->span.parent->location, "TODO: location", sizeof (p->span.parent->location));*/
 	ddev->manufacturer = "Cronyx Engineering, Moscow, Russia";
-//	ddev->devicetype = kasprintf(GFP_KERNEL, "FALC56 based span FPGA v%d.%d", Card->fFpgaVersion.sHigh, Card->fFpgaVersion.sLow);
-//	ddev->location = kasprintf(GFP_KERNEL, "PCI Bus %02d Slot %02d", Card->fPciDev->bus->number, PCI_SLOT(Card->fPciDev->devfn));
+//	ddev->devicetype = kasprintf (GFP_KERNEL, "FALC56 based span FPGA v%d.%d", Card->fFpgaVersion.sHigh, Card->fFpgaVersion.sLow);
+//	ddev->location = kasprintf (GFP_KERNEL, "PCI Bus %02d Slot %02d", Card->fPciDev->bus->number, PCI_SLOT (Card->fPciDev->devfn));
 
 	return 0;
 }
 
-void crdahdi_uninit_device(struct dahdi_device **ddev)
+void crdahdi_uninit_device (struct dahdi_device **ddev)
 {
-	if(ddev && *ddev)
+	if (ddev && *ddev)
 	{
-		dahdi_free_device(*ddev);
+		dahdi_free_device (*ddev);
 		*ddev=NULL;
 	}
 }
 
-int cdahdi_assign_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
+int cdahdi_assign_span (cronyx_binder_item_t *h, struct dahdi_device *ddev)
 {
 	dahdi_t *p = h->sw;
 	int res = -EINVAL;
@@ -1024,73 +1024,73 @@ int cdahdi_assign_span(cronyx_binder_item_t *h, struct dahdi_device *ddev)
 	{
 		p->span.parent = ddev;
 		p->span.spanno = 0;
-		dahdi_init_span(&p->span);
-		res = dahdi_assign_span(&p->span, 0, 0, 1);
+		dahdi_init_span (&p->span);
+		res = dahdi_assign_span (&p->span, 0, 0, 1);
 		if (!res)
-			list_add_tail(&p->span.device_node, &ddev->spans);
+			list_add_tail (&p->span.device_node, &ddev->spans);
 	}
 
 	return res;
 }
 
-int cdahdi_unassign_span(cronyx_binder_item_t *h)//, struct dahdi_device *ddev)
+int cdahdi_unassign_span (cronyx_binder_item_t *h)//, struct dahdi_device *ddev)
 {
 	dahdi_t *p = h->sw;
 	int res = -EINVAL;
 
 	if (p) {
-		res = dahdi_unassign_span(&p->span);
+		res = dahdi_unassign_span (&p->span);
 		if (!res)
-			list_del_init(&p->span.device_node);
+			list_del_init (&p->span.device_node);
 	}
 
 	return res;
 }
 
-static int cdahdi_attach(cronyx_binder_item_t *h)
+static int cdahdi_attach (cronyx_binder_item_t *h)
 {
-	cronyx_binder_item_t *parent = cronyx_binder_item_get_parent(h, CRONYX_ITEM_ADAPTER);
+	cronyx_binder_item_t *parent = cronyx_binder_item_get_parent (h, CRONYX_ITEM_ADAPTER);
 
 	if (h->sw != NULL)
 	{
-		CRONYX_LOG_2(h, "cdahdi: Already have registered protocol");
+		CRONYX_LOG_2 (h, "cdahdi: Already have registered protocol");
 		return -EIO;
 	}
 
 	if (parent) {
-		struct device *dev = parent->dispatch.get_device ? parent->dispatch.get_device(parent) : NULL;
-		struct dahdi_device *ddev=parent->sw ?: dahdi_create_device();
+		struct device *dev = parent->dispatch.get_device ? parent->dispatch.get_device (parent) : NULL;
+		struct dahdi_device *ddev=parent->sw ?: dahdi_create_device ();
 
 		if (dev)
 		{
-		  struct pci_dev *pdev = container_of(dev, struct pci_dev, dev);
+		  struct pci_dev *pdev = container_of (dev, struct pci_dev, dev);
 			if (pdev) {
-				CRONYX_LOG_2(h, "cdahdi: PDEV Name=%d",pdev->irq);
+				CRONYX_LOG_2 (h, "cdahdi: PDEV Name=%d",pdev->irq);
 
 			}
 		}
 
 		if (!parent->sw)
 		{
-			crdahdi_init_device(ddev);
+			crdahdi_init_device (ddev);
 		}
 
-		if (cdahdi_init_span(h, ddev)) {
-			CRONYX_LOG_2(h, "cdahdi: FAILED init span");
-			cdahdi_uninit_span(h);
+		if (cdahdi_init_span (h, ddev)) {
+			CRONYX_LOG_2 (h, "cdahdi: FAILED init span");
+			cdahdi_uninit_span (h);
 		}
 
 		if (!parent->sw) {
-			if (dahdi_register_device(ddev, dev)) {
-				dev_err(dev, "Failed crdahdi to register with DAHDI.\n");
-				crdahdi_uninit_device(&ddev);
+			if (dahdi_register_device (ddev, dev)) {
+				dev_err (dev, "Failed crdahdi to register with DAHDI.\n");
+				crdahdi_uninit_device (&ddev);
 			}else {
-				CRONYX_LOG_2(h, "cdahdi: DAHDI Register Device");
+				CRONYX_LOG_2 (h, "cdahdi: DAHDI Register Device");
 			}
 		}
 
-		if (cdahdi_assign_span(h, ddev))
-			CRONYX_LOG_2(h, "cdahdi: Can`t Assign Span");
+		if (cdahdi_assign_span (h, ddev))
+			CRONYX_LOG_2 (h, "cdahdi: Can`t Assign Span");
 
 		parent->sw=ddev;
 	}
@@ -1099,46 +1099,46 @@ static int cdahdi_attach(cronyx_binder_item_t *h)
 #if LINUX_VERSION_CODE < 0x020600
 		MOD_INC_USE_COUNT;
 #else
-		try_module_get(THIS_MODULE);
+		try_module_get (THIS_MODULE);
 #endif
 	}
 
 	return 0;
 }
 
-static int cdahdi_detach(cronyx_binder_item_t *h)
+static int cdahdi_detach (cronyx_binder_item_t *h)
 {
-	cronyx_binder_item_t *parent = cronyx_binder_item_get_parent(h, CRONYX_ITEM_ADAPTER);
+	cronyx_binder_item_t *parent = cronyx_binder_item_get_parent (h, CRONYX_ITEM_ADAPTER);
 
 	if (h->sw == NULL)
 	{
-		CRONYX_LOG_2(h, "cdahdi: Already have detached protocol\n");
+		CRONYX_LOG_2 (h, "cdahdi: Already have detached protocol\n");
 		return -EIO;
 	}
 
-	if (cdahdi_unassign_span(h))
-		CRONYX_LOG_2(h, "cdahdi: Can`t unassign span\n");
+	if (cdahdi_unassign_span (h))
+		CRONYX_LOG_2 (h, "cdahdi: Can`t unassign span\n");
 
-	cdahdi_uninit_span(h);
+	cdahdi_uninit_span (h);
 
 	if (parent && parent->sw) {
 		struct dahdi_device *ddev = parent->sw;
 
-		if (list_empty(&ddev->spans)) {
-			dahdi_unregister_device(ddev);
-			crdahdi_uninit_device(&ddev);
-			CRONYX_LOG_2(h, "cdahdi: DAHDI UnRegister Device\n");
+		if (list_empty (&ddev->spans)) {
+			dahdi_unregister_device (ddev);
+			crdahdi_uninit_device (&ddev);
+			CRONYX_LOG_2 (h, "cdahdi: DAHDI UnRegister Device\n");
 			parent->sw = NULL;
 		}else {
 			struct dahdi_span *span;
-			list_for_each_entry(span, &ddev->spans, device_node)
-				CRONYX_LOG_2(h, "cdahdi: DAHDI Device contains %d[%s]\n", span->spanno, span->name);
+			list_for_each_entry (span, &ddev->spans, device_node)
+				CRONYX_LOG_2 (h, "cdahdi: DAHDI Device contains %d[%s]\n", span->spanno, span->name);
 		}
 	}
 	return 0;
 }
 
-static void __cdahdi_modem_event(cronyx_binder_item_t *h)
+static void __cdahdi_modem_event (cronyx_binder_item_t *h)
 {
 	dahdi_t *p = h->sw;
 
@@ -1146,26 +1146,26 @@ static void __cdahdi_modem_event(cronyx_binder_item_t *h)
 		int cdahdi_alarm = 0;
 
 		if (p->start_countdown == 0) {
-			struct cronyx_ctl_t *ctl = kzalloc(sizeof(struct cronyx_ctl_t), GFP_KERNEL);
+			struct cronyx_ctl_t *ctl = kzalloc (sizeof (struct cronyx_ctl_t), GFP_KERNEL);
 
 			if (p->error) {
 				printk (KERN_ERR "cdahdi: buffer-slip/irq-miss condition on %s\n", h->name);
 				ctl->param_id = cronyx_qlen;
-				if (cronyx_ctl_get(h, ctl) >= 0 &&
+				if (cronyx_ctl_get (h, ctl) >= 0 &&
 					(p->qlen_limit == 0 || ctl->u.param.value < p->qlen_limit)) {
 					ctl->u.param.value++;
-					if (cronyx_ctl_set(h, ctl) < 0) {
+					if (cronyx_ctl_set (h, ctl) < 0) {
 						printk (KERN_WARNING "cdahdi: %s auto-grow qlen to %d on %s\n",
 							"failed", (int) ctl->u.param.value, h->name);
 					} else {
 						printk (KERN_WARNING "cdahdi: %s auto-grow qlen to %d on %s\n",
 							"success", (int) ctl->u.param.value, h->name);
 						if (p->ec)
-							ec_offset(p, p->ec->offset + p->io_chunk / p->fb_count);
+							ec_offset (p, p->ec->offset + p->io_chunk / p->fb_count);
 					}
 				}
 				if (p->error == CRONYX_ERR_UNDERRUN)
-					h->dispatch.transmit(h, p->skb);
+					h->dispatch.transmit (h, p->skb);
 				p->error = 0;
 			}
 
@@ -1175,7 +1175,7 @@ static void __cdahdi_modem_event(cronyx_binder_item_t *h)
 			}
 			if (ctl) {
 				ctl->param_id = cronyx_stat_e1 | cronyx_flag_channel2link;
-				if (cronyx_ctl_get(h, ctl) >= 0) {
+				if (cronyx_ctl_get (h, ctl) >= 0) {
 					if (ctl->u.stat_e1.status & (CRONYX_E1_CRC4E | CRONYX_E1_LOF | CRONYX_E1_LOMF | CRONYX_E1_LOS))
 						cdahdi_alarm |= DAHDI_ALARM_RED;
 					if (ctl->u.stat_e1.status & CRONYX_E1_AIS)
@@ -1206,31 +1206,31 @@ static void __cdahdi_modem_event(cronyx_binder_item_t *h)
 					p->span.count.ebit = ctl->u.stat_e1.total.rcrce;
 					p->span.count.fas = ctl->u.stat_e1.total.fse;
 				}
-				kfree(ctl);
+				kfree (ctl);
 			}
 		}
 		if (p->span.alarms != cdahdi_alarm) {
-			CRONYX_LOG_1(h, "cdahdi: notify alarm changes(0x%X -> 0x%X)\n", p->span.alarms, cdahdi_alarm);
+			CRONYX_LOG_1 (h, "cdahdi: notify alarm changes (0x%X -> 0x%X)\n", p->span.alarms, cdahdi_alarm);
 			p->span.alarms = cdahdi_alarm;
-			dahdi_alarm_notify(&p->span);
+			dahdi_alarm_notify (&p->span);
 		}
 	}
 }
 
-static void cdahdi_modem_event(cronyx_binder_item_t *h)
+static void cdahdi_modem_event (cronyx_binder_item_t *h)
 {
 	if (h->proto->dispatch_priority)
 		binder_deffered_queue1 (h, "cdahdi", &__cdahdi_modem_event);
 	else
-		__cdahdi_modem_event(h);
+		__cdahdi_modem_event (h);
 }
 
-static int cdahdi_ctl_get(cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
+static int cdahdi_ctl_get (cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
 {
 	if (item->type == CRONYX_ITEM_CHANNEL) {
 		dahdi_t *p = item->sw;
 
-		switch(ctl->param_id & ~cronyx_flag_channel2link) {
+		switch (ctl->param_id & ~cronyx_flag_channel2link) {
 		case cronyx_ec_delay:
 			ctl->u.param.value = p->ec ? p->ec->offset : 0;
 			return 0;
@@ -1246,28 +1246,28 @@ static int cdahdi_ctl_get(cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
 	return -ENOSYS;
 }
 
-static int cdahdi_ctl_set(cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
+static int cdahdi_ctl_set (cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
 {
 	if (item->type == CRONYX_ITEM_CHANNEL) {
 		dahdi_t *p = item->sw;
 
-		switch(ctl->param_id & ~cronyx_flag_channel2link) {
+		switch (ctl->param_id & ~cronyx_flag_channel2link) {
 		case cronyx_ec_delay:
-			CRONYX_LOG_1(item, "cdahdi: set ec-delay %ld\n", ctl->u.param.value);
+			CRONYX_LOG_1 (item, "cdahdi: set ec-delay %ld\n", ctl->u.param.value);
 			if (ctl->u.param.value < 0) {
 				long qlen;
 
-				if (cronyx_param_get(item, cronyx_qlen, &qlen) < 0)
+				if (cronyx_param_get (item, cronyx_qlen, &qlen) < 0)
 					qlen = 2;
-				ctl->u.param.value = ec_auto_qlen(p, qlen);
+				ctl->u.param.value = ec_auto_qlen (p, qlen);
 			}
-			return ec_offset(p, ctl->u.param.value);
+			return ec_offset (p, ctl->u.param.value);
 
 		case cronyx_qlen_limit:
 			if (ctl->u.param.value < 0) {
 				long qlen;
 
-				if (cronyx_param_get(item, cronyx_qlen, &qlen) < 0)
+				if (cronyx_param_get (item, cronyx_qlen, &qlen) < 0)
 					qlen = 2;
 				ctl->u.param.value = qlen << 1;
 			}
@@ -1282,7 +1282,7 @@ static int cdahdi_ctl_set(cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
 		case cronyx_timeslots_use:
 		case cronyx_crc4:
 		case cronyx_mtu:
-			CRONYX_LOG_1(item,
+			CRONYX_LOG_1 (item,
 				"cdahdi: can't change configuration, reconfigure dahdi/asterisk.org instead of using sconfig\n");
 			return -EBUSY;
 		}
@@ -1290,13 +1290,13 @@ static int cdahdi_ctl_set(cronyx_binder_item_t *item, struct cronyx_ctl_t *ctl)
 	return -ENOSYS;
 }
 
-static int cronyx_register_dahdi(void)
+static int cronyx_register_dahdi (void)
 {
 	//!TODO: For each binder_root find _ADAPTER && register it with spans
 	return -EINVAL;
 }
 
-static int cronyx_unregister_dahdi(void)
+static int cronyx_unregister_dahdi (void)
 {
 	return -EINVAL;
 }
@@ -1318,24 +1318,24 @@ static cronyx_proto_t cdahdi_tab = {
 	.ctl_get = cdahdi_ctl_get
 };
 
-int init_module(void)
+int init_module (void)
 {
 #if LINUX_VERSION_CODE < 0x020600
 	EXPORT_NO_SYMBOLS;
 #endif
-	cronyx_binder_register_protocol(&cdahdi_tab);
+	cronyx_binder_register_protocol (&cdahdi_tab);
 	printk (KERN_DEBUG "cdahdi: Cronyx DAHDI/asterisk.org protocol loaded\n");
 #ifdef ECHO_STATE_MAYBE_INCORRECT
 	printk (KERN_NOTICE "cdahdi: The files 'dahdi.c' or 'dahdi-base.c' was not found at make-stage, \n"
 		"cdahdi: definitions for ECHO_STATE_... may be incorrect!\n");
 #endif
-	cronyx_register_dahdi();
+	cronyx_register_dahdi ();
 	return 0;
 }
 
-void cleanup_module(void)
+void cleanup_module (void)
 {
 	cronyx_binder_unregister_protocol (&cdahdi_tab);
 	printk (KERN_DEBUG "cdahdi: Cronyx DAHDI/asterisk.org protocol unloaded\n");
-	cronyx_unregister_dahdi();
+	cronyx_unregister_dahdi ();
 }
