@@ -428,6 +428,7 @@ extern "C"
 #	include <linux/ioport.h>
 #	include <asm/io.h>
 #	include <linux/string.h>
+#	include <linux/sched.h>
 #	define ddk_inb(port)		inb (port)
 #	define ddk_outb(port, byte)	outb (byte, port)
 #	define ddk_inw(port)		inw (port)
