@@ -30,6 +30,16 @@ Digital Cards
 - wcb4xxp:
   * Digium B410: PCI quad-port BRI
 - tor2: Tormenta quad-span T1/E1 card from the Zapata Telephony project
+- ce:
+  * Cronyx Tau-PCI/32
+- cp:
+  * Cronyx Tau-PCI/Lite
+  * Cronyx Tau-PCI/2E1 dual-port E1
+  * Cronyx Tau-PCI/4E1 quad-port E1
+- ct:
+  * Cronyx Tau-ISA
+- cx:
+  * Cronyx Sigma-ISA
 
 
 Analog Cards
