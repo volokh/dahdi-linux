@@ -1,10 +1,17 @@
 /*
 * DDK (Driver Development Kit) for Cronyx Tau-PCI/32 adapter.
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 *
-* Copyright (C) 2003-2008 Cronyx Engineering, http://www.cronyx.ru
-* All rights reserved.
+* Copyright (C) 2003-2013 Cronyx Telecom (www.cronyx.ru, info@cronyx.ru)
+* Author: Leo Yuriev <ly@cronyx.ru>
 *
-* Author: Leo Yuriev <ly@cronyx.ru>, http://leo.yuriev.ru
+* This software is distributed with NO WARRANTIES, not even the implied
+* warranties for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+*
+* Authors grant any other persons or organisations a permission to use,
+* modify and redistribute this software in source and binary forms,
+* as long as this message is kept with the software, all derivative
+* works or modified versions.
 *
 * $Id: tau32-ddk.h,v 1.33 2009-07-10 11:34:12 ly Exp $
 */

@@ -1,13 +1,10 @@
 /*
  * Cronyx Tau-PCI DDK definitions.
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- * Copyright (C) 1999-2001 Cronyx Engineering.
+ * Copyright (C) 1999-2013 Cronyx Telecom (www.cronyx.ru, info@cronyx.ru)
  * Author: Serge Vakulenko, <vak@cronyx.ru>
- *
- * Copyright (C) 2001-2005 Cronyx Engineering.
  * Author: Roman Kurakin, <rik@cronyx.ru>
- *
- * Copyright (C) 2006-2009 Cronyx Engineering.
  * Author: Leo Yuriev, <ly@cronyx.ru>
  *
  * This software is distributed with NO WARRANTIES, not even the implied
