@@ -85,7 +85,9 @@ static int syn_refcount;
 static struct tty_driver *syn_serial;
 #endif
 static cronyx_termios_t *syn_termios[CRONYX_MINOR_MAX];
+#if LINUX_VERSION_CODE < 0x030409
 static cronyx_termios_t *syn_termioslocked[CRONYX_MINOR_MAX];
+#endif
 static syn_t syn_data[CRONYX_MINOR_MAX];
 
 #if LINUX_VERSION_CODE < 0x020614
@@ -364,10 +366,19 @@ static void syn_close (struct tty_struct *tty, struct file *filp);
 static void syn_hangup (struct tty_struct *tty);
 
 #if LINUX_VERSION_CODE >= 0x020544
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int syn_tiocmget (struct tty_struct *tty);
+static int syn_tiocmset (struct tty_struct *tty, unsigned int set, unsigned int clear);
+#else
 static int syn_tiocmget (struct tty_struct *tty, struct file *file);
 static int syn_tiocmset (struct tty_struct *tty, struct file *file, unsigned int set, unsigned int clear);
 #endif
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int syn_ioctl (struct tty_struct *tty, unsigned int cmd, unsigned long arg);
+#else
 static int syn_ioctl (struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg);
+#endif
 
 #if LINUX_VERSION_CODE < 0x02060a
 static int syn_write (struct tty_struct *tty, int from_user, const unsigned char *buf, int count);
@@ -431,7 +442,9 @@ int init_module (void)
 	syn_serial->devfs_name = "ttyZ";
 #endif
 	syn_serial->termios = syn_termios;
-//!	syn_serial->termios_locked = syn_termioslocked;
+#if LINUX_VERSION_CODE < 0x030409
+	syn_serial->termios_locked = syn_termioslocked;
+#endif
 
 #if LINUX_VERSION_CODE >= 0x02061a
 	syn_serial->ops = &syn_ops;
@@ -784,7 +797,11 @@ static void syn_hangup (struct tty_struct *tty)
 }
 
 #if LINUX_VERSION_CODE >= 0x020544
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int syn_tiocmget (struct tty_struct *tty)
+#else
 static int syn_tiocmget (struct tty_struct *tty, struct file *file)
+#endif
 {
 	cronyx_binder_item_t *h;
 	syn_t *p;
@@ -801,7 +818,11 @@ static int syn_tiocmget (struct tty_struct *tty, struct file *file)
 	return val;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int syn_tiocmset (struct tty_struct *tty, unsigned int set, unsigned int clear)
+#else
 static int syn_tiocmset (struct tty_struct *tty, struct file *file, unsigned int set, unsigned int clear)
+#endif
 {
 	cronyx_binder_item_t *h;
 	syn_t *p;
@@ -822,7 +843,11 @@ static int syn_tiocmset (struct tty_struct *tty, struct file *file, unsigned int
 }
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int syn_ioctl (struct tty_struct *tty, unsigned int cmd, unsigned long arg)
+#else
 static int syn_ioctl (struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg)
+#endif
 {
 	cronyx_binder_item_t *h;
 	syn_t *p;

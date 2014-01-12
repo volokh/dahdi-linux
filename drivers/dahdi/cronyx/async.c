@@ -99,7 +99,9 @@ typedef struct {
 	static struct tty_driver *asy_serial, *asy_callout;
 #endif
 static cronyx_termios_t *asy_termios[CRONYX_MINOR_MAX];
+#if LINUX_VERSION_CODE < 0x030409
 static cronyx_termios_t *asy_termioslocked[CRONYX_MINOR_MAX];
+#endif
 static asy_t asy_data[CRONYX_MINOR_MAX];
 
 #if LINUX_VERSION_CODE < 0x020614
@@ -124,8 +126,14 @@ static void asy_receive (cronyx_binder_item_t * h, struct sk_buff *skb)
 	struct tty_struct *tty = p->tty;
 
 #if LINUX_VERSION_CODE > 0x02060F
-	if (tty && tty_insert_flip_string (tty, skb->data, skb->len) > 0)
-		tty_flip_buffer_push (tty);
+#if LINUX_VERSION_CODE >= 0x030B0A
+	struct tty_port *tty_p = tty->port;
+#else
+	struct tty_struct *tty_p = tty;
+#endif
+
+	if (tty && tty_insert_flip_string (tty_p, skb->data, skb->len) > 0)
+		tty_flip_buffer_push (tty_p);
 #else
 	unsigned buflen;
 
@@ -196,8 +204,16 @@ static void asy_receive_error(cronyx_binder_item_t * h, int errcode)
 			break;
 	}
 #if LINUX_VERSION_CODE > 0x02060F
-	if (tty_insert_flip_char (tty, 0, status))
-		tty_flip_buffer_push (tty);
+	{
+#if LINUX_VERSION_CODE >= 0x030B0A
+		struct tty_port *tty_p = tty->port;
+#else
+		struct tty_struct *tty_p = tty;
+#endif
+
+		if (tty_insert_flip_char (tty_p, 0, status))
+			tty_flip_buffer_push (tty_p);
+	}
 #else
 	if (tty->flip.char_buf_ptr) {
 		if (tty->flip.count < TTY_FLIPBUF_SIZE) {
@@ -385,10 +401,19 @@ static void asy_close (struct tty_struct *tty, struct file *filp);
 static void asy_hangup (struct tty_struct *tty);
 
 #if LINUX_VERSION_CODE >= 0x020544
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int asy_tiocmget (struct tty_struct *tty);
+static int asy_tiocmset (struct tty_struct *tty, unsigned int set, unsigned int clear);
+#else
 static int asy_tiocmget (struct tty_struct *tty, struct file *file);
 static int asy_tiocmset (struct tty_struct *tty, struct file *file, unsigned int set, unsigned int clear);
 #endif
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int asy_ioctl (struct tty_struct *tty, unsigned int cmd, unsigned long arg);
+#else
 static int asy_ioctl (struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg);
+#endif
 
 #if LINUX_VERSION_CODE < 0x02060a
 static int asy_write (struct tty_struct *tty, int from_user, const unsigned char *buf, int count);
@@ -1058,7 +1083,11 @@ static void asy_hangup (struct tty_struct *tty)
 }
 
 #if LINUX_VERSION_CODE >= 0x020544
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int asy_tiocmget (struct tty_struct *tty)
+#else
 static int asy_tiocmget (struct tty_struct *tty, struct file *file)
+#endif
 {
 	cronyx_binder_item_t *h;
 	asy_t *p;
@@ -1075,7 +1104,11 @@ static int asy_tiocmget (struct tty_struct *tty, struct file *file)
 	return val;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int asy_tiocmset (struct tty_struct *tty, unsigned int set, unsigned int clear)
+#else
 static int asy_tiocmset (struct tty_struct *tty, struct file *file, unsigned int set, unsigned int clear)
+#endif
 {
 	cronyx_binder_item_t *h;
 	asy_t *p;
@@ -1100,7 +1133,11 @@ static int asy_tiocmset (struct tty_struct *tty, struct file *file, unsigned int
 }
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 10)
+static int asy_ioctl (struct tty_struct *tty, unsigned int cmd, unsigned long arg)
+#else
 static int asy_ioctl (struct tty_struct *tty, struct file *file, unsigned int cmd, unsigned long arg)
+#endif
 {
 	cronyx_binder_item_t *h;
 	asy_t *p;
